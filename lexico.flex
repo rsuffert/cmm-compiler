@@ -34,6 +34,13 @@ if { return Parser.IF; }
 else { return Parser.ELSE; }
 return { return Parser.RETURN; }
 
+"||" { return Parser.OR; }
+"&&" { return Parser.AND; }
+"==" { return Parser.EQ; }
+"!=" { return Parser.NEQ; }
+"<=" { return Parser.LE; }
+">=" { return Parser.GE; }
+
 [0-9]+(\.[0-9]+)? { return Parser.NUM;}
 [a-zA-Z][a-zA-Z0-9]* { return Parser.IDENT;}
 
@@ -47,7 +54,10 @@ return { return Parser.RETURN; }
 "+" |
 "-" |
 "*" |
-"/" { return yytext().charAt(0); } 
+"/" | 
+">" |
+"<" |
+"!" { return yytext().charAt(0); } 
 
 {WHSPACE}+ {}
 

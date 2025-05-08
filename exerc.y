@@ -3,11 +3,16 @@
 %}
    
 
-%token INT, DOUBLE, BOOLEAN, VOID, FUNC, WHILE, IF, ELSE, IDENT, NUM, RETURN
+%token INT, DOUBLE, BOOLEAN, VOID, FUNC, WHILE, IF, ELSE, IDENT, NUM, RETURN, OR, AND, EQ, NEQ, LE, GE
 
 %right '='
+%left OR
+%left AND
+%left EQ NEQ
+%left '<' '>' LE GE
 %left '+' '-'
 %left '*' '/'
+%right '!'
 
 %%
 
@@ -66,6 +71,15 @@ E : E '+' E
   | E '-' E
   | E '*' E 
   | E '/' E
+  | E '<' E
+  | E '>' E
+  | E LE E
+  | E GE E
+  | E EQ E
+  | E NEQ E
+  | E AND E
+  | E OR E
+  | '!' E
   | '(' E ')'
   | NUM
   | IDENT
@@ -132,9 +146,3 @@ E : E '+' E
       ));
   //  }
   }
-
-
-
-
-
-

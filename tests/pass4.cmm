@@ -1,18 +1,17 @@
 int a, b;
 int num1, num2;
 
-func double foo(double x, double y) {
+func double bar(double x, double y) {
     double res;
-    res = 0.0;
 
-    if (x + y) {
+    if (x > y) {
         res = x;
     }
     else {
         res = y;
     }
 
-    while (res) {
+    while (res > 0 && res != 1) {
         res = res - 1;
     }
 
