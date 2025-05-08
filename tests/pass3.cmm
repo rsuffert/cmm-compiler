@@ -1,0 +1,14 @@
+int a, b;
+int num1, num2;
+
+func double foo(double x, double y) {
+    double res;
+    res = 0.0;
+
+    if (x + y) {
+        res = x;
+    }
+    else {
+        res = y;
+    }
+}
