@@ -11,4 +11,6 @@ func double foo(double x, double y) {
     else {
         res = y;
     }
+
+    return res;
 }

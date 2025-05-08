@@ -3,4 +3,5 @@ int num1, num2;
 
 func boolean foo(double x, double y) {
     boolean ok;
+    return ok;
 }

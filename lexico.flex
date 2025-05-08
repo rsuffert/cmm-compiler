@@ -32,6 +32,7 @@ func { return Parser.FUNC; }
 while { return Parser.WHILE; }
 if { return Parser.IF; }
 else { return Parser.ELSE; }
+return { return Parser.RETURN; }
 
 [0-9]+(\.[0-9]+)? { return Parser.NUM;}
 [a-zA-Z][a-zA-Z0-9]* { return Parser.IDENT;}

@@ -3,7 +3,7 @@
 %}
    
 
-%token INT, DOUBLE, BOOLEAN, VOID, FUNC, WHILE, IF, ELSE, IDENT, NUM
+%token INT, DOUBLE, BOOLEAN, VOID, FUNC, WHILE, IF, ELSE, IDENT, NUM, RETURN
 
 %right '='
 %left '+' '-'
@@ -55,6 +55,7 @@ Cmd : Bloco
     | WHILE '(' E ')' Cmd
     | IDENT '=' E ';'
     | IF '(' E ')' Cmd RestoIf
+    | RETURN E ';'
     ;
 
 RestoIf : ELSE Cmd
