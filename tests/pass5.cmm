@@ -1,0 +1,30 @@
+int x;
+$TRACE_ON
+int array[x];
+boolean arr[1];
+$TRACE_OFF
+
+
+func void myfunc(int a) {
+    
+    int y;
+    y = 9;
+    
+    
+    if (y>x){
+        x=10;
+    }
+    
+    else{
+        
+        array[arr[y]]=y;
+    }
+    
+    
+
+}
+
+
+
+
+

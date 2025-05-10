@@ -3,7 +3,7 @@
 %}
    
 
-%token INT, DOUBLE, BOOLEAN, VOID, FUNC, WHILE, IF, ELSE, IDENT, NUM, RETURN, OR, AND, EQ, NEQ, LE, GE
+%token INT, DOUBLE, BOOLEAN, VOID, FUNC, WHILE, IF, ELSE, IDENT, NUM, RETURN, OR, AND, EQ, NEQ, LE, GE, LBRACK, RBRACK //NEW
 
 %right '='
 %left OR
@@ -13,6 +13,7 @@
 %left '+' '-'
 %left '*' '/'
 %right '!'
+%left LBRACK RBRACK
 
 %%
 
@@ -33,6 +34,7 @@ Tipo : INT
      ;
 
 ListaIdent : IDENT ',' ListaIdent
+           | E
            | IDENT
            ;
 
@@ -59,6 +61,7 @@ ListaCmd : Cmd ListaCmd
 Cmd : Bloco
     | WHILE '(' E ')' Cmd
     | IDENT '=' E ';'
+    | IDENT LBRACK E RBRACK '=' E ';'
     | IF '(' E ')' Cmd RestoIf
     | RETURN E ';'
     ;
@@ -81,6 +84,7 @@ E : E '+' E
   | E OR E
   | '!' E
   | '(' E ')'
+  | E LBRACK E RBRACK
   | NUM
   | IDENT
   ;
