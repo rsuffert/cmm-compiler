@@ -1,7 +1,7 @@
 int x;
 $TRACE_ON
-int array[x];
-boolean arr[1];
+int array[5];
+
 $TRACE_OFF
 
 
@@ -17,7 +17,7 @@ func void myfunc(int a) {
     
     else{
         
-        array[arr[y]]=y;
+        array[1+1]=y;
     }
     
     

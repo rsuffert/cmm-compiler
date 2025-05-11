@@ -45,8 +45,7 @@ return { return Parser.RETURN; }
 "!=" { return Parser.NEQ; }
 "<=" { return Parser.LE; }
 ">=" { return Parser.GE; }
-"["  { return Parser.LBRACK;}
-"]"  { return Parser.RBRACK;}
+
 
 
 [0-9]+(\.[0-9]+)? { return Parser.NUM;}
@@ -65,6 +64,8 @@ return { return Parser.RETURN; }
 "/" | 
 ">" |
 "<" |
+"[" |
+"]" |
 "!" { return yytext().charAt(0); } 
 
 {WHSPACE}+ {}
