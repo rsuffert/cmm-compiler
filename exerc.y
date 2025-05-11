@@ -35,8 +35,10 @@ Tipo : INT
 
 ListaIdent : IDENT ',' ListaIdent
            | IDENT '[' NUM ']' ',' ListaIdent
+           | IDENT '(' IDENT ')' ',' ListaIdent
            | IDENT
            | IDENT '[' NUM ']'
+           | IDENT '(' IDENT ')'
            ;
 
 DeclFun : FUNC TipoOuVoid IDENT '(' FormalPar ')' '{' DeclVar ListaCmd '}' 
@@ -87,6 +89,7 @@ E : E '+' E
   | '(' E ')'
   | E '[' E ']'
   | IDENT '(' ListaDecl ')'
+  | IDENT '(' ListaIdent ')'
   | NUM
   | IDENT
   ;

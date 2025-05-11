@@ -1,10 +1,9 @@
-int x;
 
 func void test(){
     int y;
     y = 10;
-    y = test();
-    x = test2(y,x);
+    y = test()+1;
+
 }
 
 func int test2(int a,int b){
@@ -12,3 +11,10 @@ func int test2(int a,int b){
     p = test();
 
 }
+$TRACE_ON
+func void test3(double x){
+    int k;
+    k = test3(k)+1;
+}
+
+$TRACE_OFF
