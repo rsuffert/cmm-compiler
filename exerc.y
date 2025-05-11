@@ -86,6 +86,7 @@ E : E '+' E
   | '!' E
   | '(' E ')'
   | E '[' E ']'
+  | IDENT '(' ListaDecl ')'
   | NUM
   | IDENT
   ;

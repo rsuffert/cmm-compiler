@@ -1,0 +1,14 @@
+int x;
+
+func void test(){
+    int y;
+    y = 10;
+    y = test();
+    x = test2(y,x);
+}
+
+func int test2(int a,int b){
+    int p;
+    p = test();
+
+}
