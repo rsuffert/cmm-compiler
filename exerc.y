@@ -34,11 +34,9 @@ Tipo : INT
      ;
 
 ListaIdent : IDENT ',' ListaIdent
-           | IDENT '[' NUM ']' ',' ListaIdent
-           | IDENT '(' IDENT ')' ',' ListaIdent
+           | IDENT '[' E ']' ',' ListaIdent
            | IDENT
-           | IDENT '[' NUM ']'
-           | IDENT '(' IDENT ')'
+           | IDENT '[' E ']'
            ;
 
 DeclFun : FUNC TipoOuVoid IDENT '(' FormalPar ')' '{' DeclVar ListaCmd '}' 
@@ -87,13 +85,14 @@ E : E '+' E
   | E OR E
   | '!' E
   | '(' E ')'
-  | E '[' E ']'
-  | IDENT '(' ListaDecl ')'
-  | IDENT '(' ListaIdent ')'
+  | IDENT '(' ListaArgs ')' // chamada de funcao
   | NUM
   | IDENT
   ;
 
+ListaArgs : E ',' ListaArgs
+          | E
+          ;
 
 %%
 
