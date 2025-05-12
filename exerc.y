@@ -85,6 +85,7 @@ E : E '+' E
   | E OR E
   | '!' E
   | '(' E ')'
+  | '-' E
   | IDENT '(' ListaArgs ')' // chamada de funcao
   | NUM
   | IDENT
