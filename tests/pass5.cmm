@@ -5,9 +5,7 @@ func int main(int argc) {
     array[1] = max(10,20);
     array[2] = 50;
     array[4] = (sum(argc,43) + 10 * 20) / 2;
-    array[1] = self(-1,1);
 }
-
 
 func int sum(int a, int b) {
     int res;
