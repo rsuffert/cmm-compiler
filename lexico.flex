@@ -36,8 +36,8 @@ if { return Parser.IF; }
 else { return Parser.ELSE; }
 return { return Parser.RETURN; }
 
-
-
+true {return Parser.TRUE; }
+false {return Parser.FALSE; }
 
 "||" { return Parser.OR; }
 "&&" { return Parser.AND; }
@@ -46,10 +46,14 @@ return { return Parser.RETURN; }
 "<=" { return Parser.LE; }
 ">=" { return Parser.GE; }
 
-
-
-[0-9]+(\.[0-9]+)? { return Parser.NUM;}
-[a-zA-Z][a-zA-Z0-9]* { return Parser.IDENT;}
+[0-9]+(\.[0-9]+)? {
+  yyparser.yylval = new ParserVal(Integer.parseInt(yytext()));
+  return Parser.NUM;
+}
+[a-zA-Z][a-zA-Z0-9]* {
+  yyparser.yylval = new ParserVal(yytext());
+  return Parser.IDENT;
+}
 
 ";" |
 "(" |

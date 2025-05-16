@@ -1,9 +1,13 @@
 %{
   import java.io.*;
 %}
-   
 
-%token INT, DOUBLE, BOOLEAN, VOID, FUNC, WHILE, IF, ELSE, IDENT, NUM, RETURN, OR, AND, EQ, NEQ, LE, GE //NEW
+%token INT, DOUBLE, BOOLEAN, VOID, FUNC, WHILE, IF, ELSE, IDENT, NUM, RETURN, OR, AND, EQ, NEQ, LE, GE, TRUE, FALSE
+
+%type <obj> Tipo
+%type <obj> E
+%type <obj> Cmd
+%type <sval> IDENT
 
 %right '='
 %left OR
@@ -13,7 +17,6 @@
 %left '+' '-'
 %left '*' '/'
 %right '!'
-
 
 %%
 
@@ -25,17 +28,30 @@ ListaDecl : DeclVar ListaDecl
           | // vazio
           ;
 
-DeclVar : Tipo ListaIdent ';'
-        ;
+DeclVar : Tipo {currentType = (Type)$1;} ListaIdent ';'
 
-Tipo : INT
-     | DOUBLE
-     | BOOLEAN
+Tipo : INT      {$$ = TP_INT;}
+     | DOUBLE   {$$ = TP_DOUBLE;}
+     | BOOLEAN  {$$ = TP_BOOLEAN;}
      ;
 
-ListaIdent : IDENT ',' ListaIdent
+ListaIdent : IDENT ',' ListaIdent {
+                                    String symbolId = $1;
+                                    try {
+                                      symbolTable.add(symbolId, currentType);
+                                    } catch (IllegalArgumentException e) {
+                                      semerror(e.getMessage());
+                                    }
+                                  }
            | IDENT '[' E ']' ',' ListaIdent
-           | IDENT
+           | IDENT  {
+                      String symbolId = $1;
+                      try {
+                        symbolTable.add(symbolId, currentType);
+                      } catch (IllegalArgumentException e) {
+                        semerror(e.getMessage());
+                      }
+                    }
            | IDENT '[' E ']'
            ;
 
@@ -61,7 +77,16 @@ ListaCmd : Cmd ListaCmd
 
 Cmd : Bloco
     | WHILE '(' E ')' Cmd
-    | IDENT '=' E ';'
+    | IDENT '=' E ';' {
+                        String symbolId = $1;
+                        if (!symbolTable.contains(symbolId))
+                          semerror("symbol '" + symbolId + "' not declared");
+                        Type symbolType = symbolTable.getType(symbolId);
+                        Type exprType = (Type)$3;
+                        if (symbolType != exprType)
+                          semerror("cannot assign expression of type " + exprType + " to variable '" + symbolId + "' of type " + symbolType);
+                        $$ = symbolType;
+                      }
     | IDENT '[' E ']' '=' E ';'
     | IF '(' E ')' Cmd RestoIf
     | RETURN E ';'
@@ -71,23 +96,30 @@ RestoIf : ELSE Cmd
         | // vazio
         ;
 
-E : E '+' E
-  | E '-' E
-  | E '*' E 
-  | E '/' E
-  | E '<' E
-  | E '>' E
-  | E LE E
-  | E GE E
-  | E EQ E
-  | E NEQ E
-  | E AND E
-  | E OR E
-  | '!' E
+E : E '+' E {$$ = checkType('+', (Type)$1, (Type)$3);}
+  | E '-' E {$$ = checkType('-', (Type)$1, (Type)$3);}
+  | E '*' E {$$ = checkType('*', (Type)$1, (Type)$3);}
+  | E '/' E {$$ = checkType('/', (Type)$1, (Type)$3);}
+  | E '<' E {$$ = checkType('<', (Type)$1, (Type)$3);}
+  | E '>' E {$$ = checkType('>', (Type)$1, (Type)$3);}
+  | E LE E  {$$ = checkType((char)LE,  (Type)$1, (Type)$3);}
+  | E GE E  {$$ = checkType((char)GE,  (Type)$1, (Type)$3);}
+  | E EQ E  {$$ = checkType((char)EQ,  (Type)$1, (Type)$3);}
+  | E NEQ E {$$ = checkType((char)NEQ, (Type)$1, (Type)$3);}
+  | E AND E {$$ = checkType((char)AND, (Type)$1, (Type)$3);}
+  | E OR E  {$$ = checkType((char)OR,  (Type)$1, (Type)$3);}
+  | '!' E   {$$ = checkType('!', (Type)$2, null);    }
+  | NUM     {$$ = TP_INT;}
+  | TRUE    {$$ = TP_BOOLEAN;}
+  | FALSE   {$$ = TP_BOOLEAN;}
+  | IDENT   {
+              String symbolId = $1;
+              if (!symbolTable.contains(symbolId))
+                semerror("symbol '" + symbolId + "' not declared");
+              $$ = symbolTable.getType(symbolId);                
+            }
   | '(' E ')'
   | IDENT '(' ListaArgs ')' // chamada de funcao
-  | NUM
-  | IDENT
   ;
 
 ListaArgs : E ',' ListaArgs
@@ -97,7 +129,13 @@ ListaArgs : E ',' ListaArgs
 %%
 
   private Yylex lexer;
+  private SymbolTable symbolTable = new SymbolTable();
 
+  private Type currentType;
+
+  public static final Type TP_INT = new Type("int");
+  public static final Type TP_DOUBLE = new Type("double");
+  public static final Type TP_BOOLEAN = new Type("boolean");
 
   private int yylex () {
     int yyl_return = -1;
@@ -111,6 +149,13 @@ ListaArgs : E ',' ListaArgs
     return yyl_return;
   }
 
+  public void semerror(String error) {
+    System.err.println(String.format(
+        "%sSEMANTIC ERROR: %s%s",
+        ConsoleColors.RED, error, ConsoleColors.RESET
+    ));
+    System.exit(1);
+  }
 
   public void yyerror (String error) {
     System.err.println(String.format(
@@ -132,6 +177,39 @@ ListaArgs : E ',' ListaArgs
     yydebug = debug;
   }
 
+  public Type checkType(char operator, Type leftType, Type rightType) {
+    switch(operator) {
+      case '+':
+      case '-':
+      case '*':
+      case '/':
+        if (leftType != TP_INT || rightType != TP_INT)
+          semerror("cannot operate " + leftType + " " + operator + " " + rightType);
+        return leftType;
+      case '<':
+      case '>':
+      case LE:
+      case GE:
+        if (leftType != TP_INT || rightType != TP_INT)
+          semerror("cannot operate " + leftType + " " + operator + " " + rightType);
+        return TP_BOOLEAN;
+      case AND:
+      case OR:
+        if (leftType != TP_BOOLEAN || rightType != TP_BOOLEAN)
+          semerror("cannot operate " + leftType + " " + operator + " " + rightType);
+        return leftType;
+      case '!':
+        if (leftType != TP_BOOLEAN)
+          semerror("cannot operate " + operator + leftType);
+        return leftType;
+      case EQ:
+      case NEQ:
+        if (leftType != rightType)
+          semerror("cannot operate " + leftType + " " + operator + " " + rightType);
+        return TP_BOOLEAN;
+    }
+    return null;
+  }
 
   public static void main(String args[]) throws IOException {
     Parser yyparser;
