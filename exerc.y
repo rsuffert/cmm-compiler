@@ -28,7 +28,7 @@ ListaDecl : DeclVar ListaDecl
           | // vazio
           ;
 
-DeclVar : Tipo {currentType = (Type)$1;} ListaIdent ';'
+DeclVar : Tipo {currentType = (SymbolTableEntry)$1;} ListaIdent ';'
 
 Tipo : INT      {$$ = TP_INT;}
      | DOUBLE   {$$ = TP_DOUBLE;}
@@ -81,10 +81,11 @@ Cmd : Bloco
                         String symbolId = $1;
                         if (!symbolTable.contains(symbolId))
                           semerror("symbol '" + symbolId + "' not declared");
-                        Type symbolType = symbolTable.getType(symbolId);
-                        Type exprType = (Type)$3;
+                        SymbolTableEntry symbolType = symbolTable.get(symbolId);
+                        SymbolTableEntry exprType = (SymbolTableEntry)$3;
                         if (symbolType != exprType)
-                          semerror("cannot assign expression of type " + exprType + " to variable '" + symbolId + "' of type " + symbolType);
+                          semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
+                                   "' of type " + primTypeToStr(symbolType));
                         $$ = symbolType;
                       }
     | IDENT '[' E ']' '=' E ';'
@@ -96,19 +97,19 @@ RestoIf : ELSE Cmd
         | // vazio
         ;
 
-E : E '+' E {$$ = checkType('+', (Type)$1, (Type)$3);}
-  | E '-' E {$$ = checkType('-', (Type)$1, (Type)$3);}
-  | E '*' E {$$ = checkType('*', (Type)$1, (Type)$3);}
-  | E '/' E {$$ = checkType('/', (Type)$1, (Type)$3);}
-  | E '<' E {$$ = checkType('<', (Type)$1, (Type)$3);}
-  | E '>' E {$$ = checkType('>', (Type)$1, (Type)$3);}
-  | E LE E  {$$ = checkType((char)LE,  (Type)$1, (Type)$3);}
-  | E GE E  {$$ = checkType((char)GE,  (Type)$1, (Type)$3);}
-  | E EQ E  {$$ = checkType((char)EQ,  (Type)$1, (Type)$3);}
-  | E NEQ E {$$ = checkType((char)NEQ, (Type)$1, (Type)$3);}
-  | E AND E {$$ = checkType((char)AND, (Type)$1, (Type)$3);}
-  | E OR E  {$$ = checkType((char)OR,  (Type)$1, (Type)$3);}
-  | '!' E   {$$ = checkType('!', (Type)$2, null);    }
+E : E '+' E {$$ = checkType('+', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
+  | E '-' E {$$ = checkType('-', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
+  | E '*' E {$$ = checkType('*', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
+  | E '/' E {$$ = checkType('/', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
+  | E '<' E {$$ = checkType('<', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
+  | E '>' E {$$ = checkType('>', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
+  | E LE E  {$$ = checkType((char)LE,  (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
+  | E GE E  {$$ = checkType((char)GE,  (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
+  | E EQ E  {$$ = checkType((char)EQ,  (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
+  | E NEQ E {$$ = checkType((char)NEQ, (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
+  | E AND E {$$ = checkType((char)AND, (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
+  | E OR E  {$$ = checkType((char)OR,  (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
+  | '!' E   {$$ = checkType('!', (SymbolTableEntry)$2, null);    }
   | INT_LITERAL    {$$ = TP_INT;}
   | DOUBLE_LITERAL {$$ = TP_DOUBLE;}
   | TRUE           {$$ = TP_BOOLEAN;}
@@ -117,7 +118,7 @@ E : E '+' E {$$ = checkType('+', (Type)$1, (Type)$3);}
               String symbolId = $1;
               if (!symbolTable.contains(symbolId))
                 semerror("symbol '" + symbolId + "' not declared");
-              $$ = symbolTable.getType(symbolId);                
+              $$ = symbolTable.get(symbolId);                
             }
   | '(' E ')'
   | IDENT '(' ListaArgs ')' // chamada de funcao
@@ -132,11 +133,11 @@ ListaArgs : E ',' ListaArgs
   private Yylex lexer;
   private SymbolTable symbolTable = new SymbolTable();
 
-  private Type currentType;
+  private SymbolTableEntry currentType;
 
-  public static final Type TP_INT = new Type("int");
-  public static final Type TP_DOUBLE = new Type("double");
-  public static final Type TP_BOOLEAN = new Type("boolean");
+  public static final SymbolTableEntry TP_INT = new SymbolTableEntry(null, SymbolTableEntry.Class.PRIM_TYPE);
+  public static final SymbolTableEntry TP_DOUBLE = new SymbolTableEntry(null, SymbolTableEntry.Class.PRIM_TYPE);
+  public static final SymbolTableEntry TP_BOOLEAN = new SymbolTableEntry(null, SymbolTableEntry.Class.PRIM_TYPE);
 
   private int yylex () {
     int yyl_return = -1;
@@ -178,18 +179,44 @@ ListaArgs : E ',' ListaArgs
     yydebug = debug;
   }
 
-  public boolean isNumeric(Type type) {
+  public boolean isNumeric(SymbolTableEntry type) {
     return type == TP_INT || type == TP_DOUBLE;
   }
 
-  public Type checkType(char operator, Type leftType, Type rightType) {
+  public String primTypeToStr(SymbolTableEntry type) {
+    if (type == TP_INT)
+      return "int";
+    if (type == TP_DOUBLE)
+      return "double";
+    if (type == TP_BOOLEAN)
+      return "boolean";
+    throw new IllegalArgumentException("Unknown type: " + type);
+  }
+
+  public String operatorToStr(char operator) {
+    boolean isAscii = operator >= 0 && operator <= 127;
+    if (isAscii)
+      return String.valueOf((char) operator);
+    switch (operator) {
+      case LE:  return "<=";
+      case GE:  return ">=";
+      case EQ:  return "==";
+      case NEQ: return "!=";
+      case AND: return "&&";
+      case OR:  return "||";
+      default:
+        throw new IllegalArgumentException("Unknown operator: " + operator);
+    }
+  }
+
+  public SymbolTableEntry checkType(char operator, SymbolTableEntry leftType, SymbolTableEntry rightType) {
     switch(operator) {
       case '+':
       case '-':
       case '*':
       case '/':
         if (!isNumeric(leftType) || !isNumeric(rightType))
-          semerror("cannot operate " + leftType + " " + operator + " " + rightType);
+          semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
         if (leftType == TP_DOUBLE || rightType == TP_DOUBLE)
           return TP_DOUBLE;
         return TP_INT;
@@ -198,21 +225,21 @@ ListaArgs : E ',' ListaArgs
       case LE:
       case GE:
         if (!isNumeric(leftType) || !isNumeric(rightType))
-          semerror("cannot operate " + leftType + " " + operator + " " + rightType);
+          semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
         return TP_BOOLEAN;
       case AND:
       case OR:
         if (leftType != TP_BOOLEAN || rightType != TP_BOOLEAN)
-          semerror("cannot operate " + leftType + " " + operator + " " + rightType);
-        return leftType;
+          semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
+        return TP_BOOLEAN;
       case '!':
         if (leftType != TP_BOOLEAN)
           semerror("cannot operate " + operator + leftType);
-        return leftType;
+        return TP_BOOLEAN;
       case EQ:
       case NEQ:
         if (leftType != rightType)
-          semerror("cannot operate " + leftType + " " + operator + " " + rightType);
+          semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
         return TP_BOOLEAN;
     }
     return null;

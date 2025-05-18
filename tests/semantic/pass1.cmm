@@ -1,0 +1,10 @@
+int a;
+double b, c;
+
+func int main(int argc) {    
+    double sum;
+    a = 1;
+    b = 2.0;
+    c = 2.0;
+    sum = a + b + c;
+}
