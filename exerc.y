@@ -92,7 +92,7 @@ Cmd : Bloco
                                   SymbolTableEntry exprType = (SymbolTableEntry)$6;
                                   if (arrayBaseType != exprType)
                                     semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
-                                             "' of type " + primTypeToStr(symbolType));
+                                             "' of type " + primTypeToStr(symbolType.getArrayBaseType()));
                                   $$ = symbolType;
                                 }
     | IF '(' E ')' Cmd RestoIf
