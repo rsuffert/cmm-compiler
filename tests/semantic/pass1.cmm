@@ -1,10 +1,10 @@
-int a;
-double b, c;
+int a, b;
+double c;
 
 func int main(int argc) {    
     double sum;
     a = 1;
-    b = 2.0;
-    c = 2.0;
+    b = a;
+    c = 2.5;
     sum = a + b + c;
 }
