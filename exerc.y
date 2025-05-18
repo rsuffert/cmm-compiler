@@ -23,7 +23,7 @@
 Prog : ListaDecl
      ;
 
-ListaDecl : DeclVar ListaDecl
+ListaDecl : {currentClass = SymbolTableEntry.Class.GLOBAL_VAR;} DeclVar ListaDecl
           | DeclFun ListaDecl
           | // vazio
           ;
@@ -37,8 +37,9 @@ Tipo : INT      {$$ = TP_INT;}
 
 ListaIdent : IDENT ',' ListaIdent {
                                     String symbolId = $1;
+                                    SymbolTableEntry symbolType = new SymbolTableEntry(currentType, currentClass);
                                     try {
-                                      symbolTable.add(symbolId, currentType);
+                                      symbolTable.add(symbolId, symbolType);
                                     } catch (IllegalArgumentException e) {
                                       semerror(e.getMessage());
                                     }
@@ -46,8 +47,9 @@ ListaIdent : IDENT ',' ListaIdent {
            | IDENT '[' E ']' ',' ListaIdent
            | IDENT  {
                       String symbolId = $1;
+                      SymbolTableEntry symbolType = new SymbolTableEntry(currentType, currentClass);
                       try {
-                        symbolTable.add(symbolId, currentType);
+                        symbolTable.add(symbolId, symbolType);
                       } catch (IllegalArgumentException e) {
                         semerror(e.getMessage());
                       }
@@ -55,7 +57,7 @@ ListaIdent : IDENT ',' ListaIdent {
            | IDENT '[' E ']'
            ;
 
-DeclFun : FUNC TipoOuVoid IDENT '(' FormalPar ')' '{' DeclVar ListaCmd '}' 
+DeclFun : FUNC TipoOuVoid IDENT '(' FormalPar ')' '{' {currentClass = SymbolTableEntry.Class.LOCAL_VAR;} DeclVar ListaCmd '}' 
 
 TipoOuVoid : Tipo
            | VOID
@@ -83,9 +85,9 @@ Cmd : Bloco
                           semerror("symbol '" + symbolId + "' not declared");
                         SymbolTableEntry symbolType = symbolTable.get(symbolId);
                         SymbolTableEntry exprType = (SymbolTableEntry)$3;
-                        if (symbolType != exprType)
-                          semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
-                                   "' of type " + primTypeToStr(symbolType));
+                        if (symbolType.getType() != exprType.getType())
+                          semerror("cannot assign expression of type " + primTypeToStr(exprType.getType()) + " to variable '" + symbolId +
+                                   "' of type " + primTypeToStr(symbolType.getType()));
                         $$ = symbolType;
                       }
     | IDENT '[' E ']' '=' E ';'
@@ -134,6 +136,7 @@ ListaArgs : E ',' ListaArgs
   private SymbolTable symbolTable = new SymbolTable();
 
   private SymbolTableEntry currentType;
+  private SymbolTableEntry.Class currentClass;
 
   public static final SymbolTableEntry TP_INT = new SymbolTableEntry(null, SymbolTableEntry.Class.PRIM_TYPE);
   public static final SymbolTableEntry TP_DOUBLE = new SymbolTableEntry(null, SymbolTableEntry.Class.PRIM_TYPE);
@@ -215,31 +218,31 @@ ListaArgs : E ',' ListaArgs
       case '-':
       case '*':
       case '/':
-        if (!isNumeric(leftType) || !isNumeric(rightType))
-          semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
-        if (leftType == TP_DOUBLE || rightType == TP_DOUBLE)
+        if (!isNumeric(leftType.getType()) || !isNumeric(rightType.getType()))
+          semerror("cannot operate " + primTypeToStr(leftType.getType()) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType.getType()));
+        if (leftType.getType() == TP_DOUBLE || rightType.getType() == TP_DOUBLE)
           return TP_DOUBLE;
         return TP_INT;
       case '<':
       case '>':
       case LE:
       case GE:
-        if (!isNumeric(leftType) || !isNumeric(rightType))
-          semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
+        if (!isNumeric(leftType.getType()) || !isNumeric(rightType.getType()))
+          semerror("cannot operate " + primTypeToStr(leftType.getType()) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType.getType()));
         return TP_BOOLEAN;
       case AND:
       case OR:
-        if (leftType != TP_BOOLEAN || rightType != TP_BOOLEAN)
-          semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
+        if (leftType.getType() != TP_BOOLEAN || rightType.getType() != TP_BOOLEAN)
+          semerror("cannot operate " + primTypeToStr(leftType.getType()) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType.getType()));
         return TP_BOOLEAN;
       case '!':
-        if (leftType != TP_BOOLEAN)
-          semerror("cannot operate " + operator + leftType);
+        if (leftType.getType() != TP_BOOLEAN)
+          semerror("cannot operate " + operator + leftType.getType());
         return TP_BOOLEAN;
       case EQ:
       case NEQ:
-        if (leftType != rightType)
-          semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
+        if (leftType.getType() != rightType.getType())
+          semerror("cannot operate " + primTypeToStr(leftType.getType()) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType.getType()));
         return TP_BOOLEAN;
     }
     return null;
