@@ -2,7 +2,7 @@
   import java.io.*;
 %}
 
-%token INT, DOUBLE, BOOLEAN, VOID, FUNC, WHILE, IF, ELSE, IDENT, NUM, RETURN, OR, AND, EQ, NEQ, LE, GE, TRUE, FALSE
+%token INT, DOUBLE, BOOLEAN, VOID, FUNC, WHILE, IF, ELSE, IDENT, INT_LITERAL, DOUBLE_LITERAL, RETURN, OR, AND, EQ, NEQ, LE, GE, TRUE, FALSE
 
 %type <obj> Tipo
 %type <obj> E
@@ -109,9 +109,10 @@ E : E '+' E {$$ = checkType('+', (Type)$1, (Type)$3);}
   | E AND E {$$ = checkType((char)AND, (Type)$1, (Type)$3);}
   | E OR E  {$$ = checkType((char)OR,  (Type)$1, (Type)$3);}
   | '!' E   {$$ = checkType('!', (Type)$2, null);    }
-  | NUM     {$$ = TP_INT;}
-  | TRUE    {$$ = TP_BOOLEAN;}
-  | FALSE   {$$ = TP_BOOLEAN;}
+  | INT_LITERAL    {$$ = TP_INT;}
+  | DOUBLE_LITERAL {$$ = TP_DOUBLE;}
+  | TRUE           {$$ = TP_BOOLEAN;}
+  | FALSE          {$$ = TP_BOOLEAN;}
   | IDENT   {
               String symbolId = $1;
               if (!symbolTable.contains(symbolId))
@@ -177,20 +178,26 @@ ListaArgs : E ',' ListaArgs
     yydebug = debug;
   }
 
+  public boolean isNumeric(Type type) {
+    return type == TP_INT || type == TP_DOUBLE;
+  }
+
   public Type checkType(char operator, Type leftType, Type rightType) {
     switch(operator) {
       case '+':
       case '-':
       case '*':
       case '/':
-        if (leftType != TP_INT || rightType != TP_INT)
+        if (!isNumeric(leftType) || !isNumeric(rightType))
           semerror("cannot operate " + leftType + " " + operator + " " + rightType);
-        return leftType;
+        if (leftType == TP_DOUBLE || rightType == TP_DOUBLE)
+          return TP_DOUBLE;
+        return TP_INT;
       case '<':
       case '>':
       case LE:
       case GE:
-        if (leftType != TP_INT || rightType != TP_INT)
+        if (!isNumeric(leftType) || !isNumeric(rightType))
           semerror("cannot operate " + leftType + " " + operator + " " + rightType);
         return TP_BOOLEAN;
       case AND:

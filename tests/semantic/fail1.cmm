@@ -1,0 +1,4 @@
+func int main(int argc) {    
+    int a;
+    a = 2 * 2.5;
+}
