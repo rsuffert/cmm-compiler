@@ -2,9 +2,9 @@ int a, b;
 double c;
 
 func int main(int argc) {    
-    int sum;
+    int sum[1];
     a = 1;
     b = a;
     c = 2.5;
-    sum = a + b + c;
+    sum[0] = a + b + c;
 }

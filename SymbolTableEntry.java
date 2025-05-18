@@ -1,6 +1,7 @@
 public class SymbolTableEntry {
     public enum Class { LOCAL_VAR, GLOBAL_VAR, FUNCTION, PRIM_TYPE }
 
+    // ========================== MEMBERS FOR PRIMITIVE SYMBOLS ==========================
     private SymbolTableEntry type;
     private Class cls;
 
@@ -18,6 +19,19 @@ public class SymbolTableEntry {
         return cls;
     }
 
+    // ========================== MEMBERS FOR ARRAY SYMBOLS ==========================
+    private SymbolTableEntry arrayBaseType;
+
+    public SymbolTableEntry(SymbolTableEntry arrayBaseType, SymbolTableEntry type, Class cls) {
+        this(type, cls);
+        this.arrayBaseType = arrayBaseType;
+    }
+
+    public SymbolTableEntry getArrayBaseType() {
+        return arrayBaseType;
+    }
+
+    // ========================== MEMBERS FOR THE CLASS ==========================
     public String toString() {
         return String.format("%s {TYPE = %s, CLS = %s}", getClass().getName(), type, cls);
     }

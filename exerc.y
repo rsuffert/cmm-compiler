@@ -35,26 +35,10 @@ Tipo : INT      {$$ = TP_INT;}
      | BOOLEAN  {$$ = TP_BOOLEAN;}
      ;
 
-ListaIdent : IDENT ',' ListaIdent {
-                                    String symbolId = $1;
-                                    SymbolTableEntry symbolType = new SymbolTableEntry(currentType, currentClass);
-                                    try {
-                                      symbolTable.add(symbolId, symbolType);
-                                    } catch (IllegalArgumentException e) {
-                                      semerror(e.getMessage());
-                                    }
-                                  }
-           | IDENT '[' E ']' ',' ListaIdent
-           | IDENT  {
-                      String symbolId = $1;
-                      SymbolTableEntry symbolType = new SymbolTableEntry(currentType, currentClass);
-                      try {
-                        symbolTable.add(symbolId, symbolType);
-                      } catch (IllegalArgumentException e) {
-                        semerror(e.getMessage());
-                      }
-                    }
-           | IDENT '[' E ']'
+ListaIdent : IDENT ',' ListaIdent           {addSymbolToTable($1, false);}
+           | IDENT '[' E ']' ',' ListaIdent {addSymbolToTable($1, true);}
+           | IDENT                          {addSymbolToTable($1, false);}
+           | IDENT '[' E ']'                {addSymbolToTable($1, true);}
            ;
 
 DeclFun : FUNC TipoOuVoid IDENT '(' FormalPar ')' '{' {currentClass = SymbolTableEntry.Class.LOCAL_VAR;} DeclVar ListaCmd '}' 
@@ -86,11 +70,27 @@ Cmd : Bloco
                         SymbolTableEntry symbolType = symbolTable.get(symbolId);
                         SymbolTableEntry exprType = (SymbolTableEntry)$3;
                         if (symbolType.getType() != exprType.getType())
-                          semerror("cannot assign expression of type " + primTypeToStr(exprType.getType()) + " to variable '" + symbolId +
-                                   "' of type " + primTypeToStr(symbolType.getType()));
+                          semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
+                                   "' of type " + primTypeToStr(symbolType));
                         $$ = symbolType;
                       }
-    | IDENT '[' E ']' '=' E ';'
+    | IDENT '[' E ']' '=' E ';' {
+                                  String symbolId = $1;
+                                  if (!symbolTable.contains(symbolId))
+                                    semerror("symbol '" + symbolId + "' not declared");
+                                  SymbolTableEntry symbolType = symbolTable.get(symbolId);
+                                  if (symbolType.getType() != TP_ARRAY)
+                                    semerror("symbol '" + symbolId + "' is not of array type");
+                                  SymbolTableEntry arrayBaseType = symbolType.getArrayBaseType();
+                                  SymbolTableEntry sizeType = (SymbolTableEntry)$3;
+                                  if (sizeType.getType() != TP_INT)
+                                    semerror("array size must be of type int");
+                                  SymbolTableEntry exprType = (SymbolTableEntry)$6;
+                                  if (arrayBaseType != exprType)
+                                    semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
+                                             "' of type " + primTypeToStr(symbolType));
+                                  $$ = symbolType;
+                                }
     | IF '(' E ')' Cmd RestoIf
     | RETURN E ';'
     ;
@@ -116,6 +116,19 @@ E : E '+' E {$$ = checkType('+', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
   | DOUBLE_LITERAL {$$ = TP_DOUBLE;}
   | TRUE           {$$ = TP_BOOLEAN;}
   | FALSE          {$$ = TP_BOOLEAN;}
+  | IDENT '[' E ']' {
+                      String symbolId = $1;
+                      if (!symbolTable.contains(symbolId))
+                        semerror("symbol '" + symbolId + "' not declared");
+                      SymbolTableEntry symbolType = symbolTable.get(symbolId);
+                      if (symbolType.getType() != TP_ARRAY)
+                        semerror("symbol '" + symbolId + "' is not of array type (not indexable)");
+                      SymbolTableEntry arrayBaseType = symbolType.getArrayBaseType();
+                      SymbolTableEntry sizeType = (SymbolTableEntry)$3;
+                      if (sizeType.getType() != TP_INT)
+                        semerror("array size must be of type int");
+                      $$ = symbolType;
+                    }
   | IDENT   {
               String symbolId = $1;
               if (!symbolTable.contains(symbolId))
@@ -141,6 +154,7 @@ ListaArgs : E ',' ListaArgs
   public static final SymbolTableEntry TP_INT = new SymbolTableEntry(null, SymbolTableEntry.Class.PRIM_TYPE);
   public static final SymbolTableEntry TP_DOUBLE = new SymbolTableEntry(null, SymbolTableEntry.Class.PRIM_TYPE);
   public static final SymbolTableEntry TP_BOOLEAN = new SymbolTableEntry(null, SymbolTableEntry.Class.PRIM_TYPE);
+  public static final SymbolTableEntry TP_ARRAY = new SymbolTableEntry(null, SymbolTableEntry.Class.PRIM_TYPE);
 
   private int yylex () {
     int yyl_return = -1;
@@ -187,12 +201,14 @@ ListaArgs : E ',' ListaArgs
   }
 
   public String primTypeToStr(SymbolTableEntry type) {
-    if (type == TP_INT)
+    if (type.getType() == TP_INT)
       return "int";
-    if (type == TP_DOUBLE)
+    if (type.getType() == TP_DOUBLE)
       return "double";
-    if (type == TP_BOOLEAN)
+    if (type.getType() == TP_BOOLEAN)
       return "boolean";
+    if (type.getType() == TP_ARRAY)
+      return primTypeToStr(type.getArrayBaseType()) + "[]";
     throw new IllegalArgumentException("Unknown type: " + type);
   }
 
@@ -212,6 +228,17 @@ ListaArgs : E ',' ListaArgs
     }
   }
 
+  public void addSymbolToTable(String symbolId, boolean isArray) {
+    SymbolTableEntry symbolType = new SymbolTableEntry(currentType, currentClass);
+    if (isArray)
+      symbolType = new SymbolTableEntry(currentType, TP_ARRAY, currentClass);
+    try {
+      symbolTable.add(symbolId, symbolType);
+    } catch (IllegalArgumentException e) {
+      semerror(e.getMessage());
+    }
+  }
+
   public SymbolTableEntry checkType(char operator, SymbolTableEntry leftType, SymbolTableEntry rightType) {
     switch(operator) {
       case '+':
@@ -219,7 +246,7 @@ ListaArgs : E ',' ListaArgs
       case '*':
       case '/':
         if (!isNumeric(leftType.getType()) || !isNumeric(rightType.getType()))
-          semerror("cannot operate " + primTypeToStr(leftType.getType()) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType.getType()));
+          semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
         if (leftType.getType() == TP_DOUBLE || rightType.getType() == TP_DOUBLE)
           return TP_DOUBLE;
         return TP_INT;
@@ -228,12 +255,12 @@ ListaArgs : E ',' ListaArgs
       case LE:
       case GE:
         if (!isNumeric(leftType.getType()) || !isNumeric(rightType.getType()))
-          semerror("cannot operate " + primTypeToStr(leftType.getType()) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType.getType()));
+          semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
         return TP_BOOLEAN;
       case AND:
       case OR:
         if (leftType.getType() != TP_BOOLEAN || rightType.getType() != TP_BOOLEAN)
-          semerror("cannot operate " + primTypeToStr(leftType.getType()) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType.getType()));
+          semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
         return TP_BOOLEAN;
       case '!':
         if (leftType.getType() != TP_BOOLEAN)
@@ -242,7 +269,7 @@ ListaArgs : E ',' ListaArgs
       case EQ:
       case NEQ:
         if (leftType.getType() != rightType.getType())
-          semerror("cannot operate " + primTypeToStr(leftType.getType()) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType.getType()));
+          semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
         return TP_BOOLEAN;
     }
     return null;
