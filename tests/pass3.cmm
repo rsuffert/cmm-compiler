@@ -1,0 +1,15 @@
+int a, b;
+int num1, num2;
+
+func double max(double x, double y) {
+    double res;
+
+    if (x >= y) {
+        res = x;
+    }
+    else {
+        res = y;
+    }
+
+    return res;
+}
