@@ -1,5 +1,6 @@
-int a, b;
 double c;
+int a, b;
+double z[1];
 
 func int main(int argc) {    
     double sum[1];
@@ -7,4 +8,5 @@ func int main(int argc) {
     b = a;
     c = 2.5;
     sum[0] = a + b + c;
+    z = sum;
 }

@@ -72,6 +72,10 @@ Cmd : Bloco
                         if (symbolType.getType() != exprType.getType())
                           semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
                                    "' of type " + primTypeToStr(symbolType));
+                        if (symbolType.getType() == TP_ARRAY || exprType.getType() == TP_ARRAY)
+                          if (symbolType.getArrayBaseType() != exprType.getArrayBaseType())
+                            semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
+                                     "' of type " + primTypeToStr(symbolType));
                         $$ = symbolType;
                       }
     | IDENT '[' E ']' '=' E ';' {
