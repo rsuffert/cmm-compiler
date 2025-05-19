@@ -275,6 +275,9 @@ ListaArgs : E ',' ListaArgs
         return TP_BOOLEAN;
       case EQ:
       case NEQ:
+        if (isNumeric(leftType.getType()) && isNumeric(rightType.getType()))
+          // we allow operating between int and double interchangeably for equality comparison
+          return TP_BOOLEAN;
         if (leftType.getType() != rightType.getType())
           semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
         return TP_BOOLEAN;
