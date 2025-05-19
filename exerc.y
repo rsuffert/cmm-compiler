@@ -70,12 +70,14 @@ Cmd : Bloco
                         SymbolTableEntry symbolType = symbolTable.get(symbolId);
                         SymbolTableEntry exprType = (SymbolTableEntry)$3;
                         if (symbolType.getType() != exprType.getType())
-                          semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
-                                   "' of type " + primTypeToStr(symbolType));
+                          if (symbolType.getType() != TP_DOUBLE && exprType.getType() != TP_INT) // type coercion
+                            semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
+                                    "' of type " + primTypeToStr(symbolType));
                         if (symbolType.getType() == TP_ARRAY || exprType.getType() == TP_ARRAY)
                           if (symbolType.getArrayBaseType() != exprType.getArrayBaseType())
-                            semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
-                                     "' of type " + primTypeToStr(symbolType));
+                            if (symbolType.getArrayBaseType() != TP_DOUBLE && exprType.getArrayBaseType() != TP_INT) // type coercion
+                              semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
+                                      "' of type " + primTypeToStr(symbolType));
                         $$ = symbolType;
                       }
     | IDENT '[' E ']' '=' E ';' {
@@ -91,8 +93,9 @@ Cmd : Bloco
                                     semerror("array size must be of type int");
                                   SymbolTableEntry exprType = (SymbolTableEntry)$6;
                                   if (arrayBaseType != exprType)
-                                    semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
-                                             "' of type " + primTypeToStr(symbolType.getArrayBaseType()));
+                                    if (arrayBaseType != TP_DOUBLE && exprType != TP_INT) // type coercion
+                                      semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
+                                              "' of type " + primTypeToStr(symbolType.getArrayBaseType()));
                                   $$ = symbolType;
                                 }
     | IF '(' E ')' Cmd RestoIf
@@ -251,7 +254,7 @@ ListaArgs : E ',' ListaArgs
       case '/':
         if (!isNumeric(leftType.getType()) || !isNumeric(rightType.getType()))
           semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
-        if (leftType.getType() == TP_DOUBLE || rightType.getType() == TP_DOUBLE)
+        if (leftType.getType() == TP_DOUBLE || rightType.getType() == TP_DOUBLE) // type coercion
           return TP_DOUBLE;
         return TP_INT;
       case '<':
