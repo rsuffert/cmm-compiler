@@ -282,8 +282,9 @@ public SymbolTableEntry assign(String symbolId, SymbolTableEntry exprType, boole
         if (leftType.getType() != rightType.getType())
           semerror("cannot operate " + primTypeToStr(leftType) + " " + operatorToStr(operator) + " " + primTypeToStr(rightType));
         return TP_BOOLEAN;
+      default:
+        throw new IllegalArgumentException("Unknown operator: " + operator);
     }
-    return null;
   }
 
   public static void main(String args[]) throws IOException {
