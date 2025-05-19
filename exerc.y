@@ -65,38 +65,16 @@ Cmd : Bloco
     | WHILE '(' E ')' Cmd
     | IDENT '=' E ';' {
                         String symbolId = $1;
-                        if (!symbolTable.contains(symbolId))
-                          semerror("symbol '" + symbolId + "' not declared");
-                        SymbolTableEntry symbolType = symbolTable.get(symbolId);
                         SymbolTableEntry exprType = (SymbolTableEntry)$3;
-                        if (symbolType.getType() != exprType.getType())
-                          if (symbolType.getType() != TP_DOUBLE && exprType.getType() != TP_INT) // type coercion
-                            semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
-                                    "' of type " + primTypeToStr(symbolType));
-                        if (symbolType.getType() == TP_ARRAY || exprType.getType() == TP_ARRAY)
-                          if (symbolType.getArrayBaseType() != exprType.getArrayBaseType())
-                            if (symbolType.getArrayBaseType() != TP_DOUBLE && exprType.getArrayBaseType() != TP_INT) // type coercion
-                              semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
-                                      "' of type " + primTypeToStr(symbolType));
-                        $$ = symbolType;
+                        $$ = assign(symbolId, exprType, false);
                       }
     | IDENT '[' E ']' '=' E ';' {
-                                  String symbolId = $1;
-                                  if (!symbolTable.contains(symbolId))
-                                    semerror("symbol '" + symbolId + "' not declared");
-                                  SymbolTableEntry symbolType = symbolTable.get(symbolId);
-                                  if (symbolType.getType() != TP_ARRAY)
-                                    semerror("symbol '" + symbolId + "' is not of array type");
-                                  SymbolTableEntry arrayBaseType = symbolType.getArrayBaseType();
                                   SymbolTableEntry sizeType = (SymbolTableEntry)$3;
                                   if (sizeType.getType() != TP_INT)
                                     semerror("array size must be of type int");
+                                  String symbolId = $1;
                                   SymbolTableEntry exprType = (SymbolTableEntry)$6;
-                                  if (arrayBaseType != exprType)
-                                    if (arrayBaseType != TP_DOUBLE && exprType != TP_INT) // type coercion
-                                      semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
-                                              "' of type " + primTypeToStr(symbolType.getArrayBaseType()));
-                                  $$ = symbolType;
+                                  $$ = assign(symbolId, exprType, true);
                                 }
     | IF '(' E ')' Cmd RestoIf
     | RETURN E ';'
@@ -130,7 +108,6 @@ E : E '+' E {$$ = checkType('+', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
                       SymbolTableEntry symbolType = symbolTable.get(symbolId);
                       if (symbolType.getType() != TP_ARRAY)
                         semerror("symbol '" + symbolId + "' is not of array type (not indexable)");
-                      SymbolTableEntry arrayBaseType = symbolType.getArrayBaseType();
                       SymbolTableEntry sizeType = (SymbolTableEntry)$3;
                       if (sizeType.getType() != TP_INT)
                         semerror("array size must be of type int");
@@ -245,6 +222,30 @@ ListaArgs : E ',' ListaArgs
       semerror(e.getMessage());
     }
   }
+
+public SymbolTableEntry assign(String symbolId, SymbolTableEntry exprType, boolean isArray) {
+    if (!symbolTable.contains(symbolId))
+        semerror("symbol '" + symbolId + "' not declared");
+
+    SymbolTableEntry symbolType = symbolTable.get(symbolId);
+
+    if (!isArray) {
+      if (symbolType.getType() != exprType.getType())
+          if (symbolType.getType() != TP_DOUBLE && exprType.getType() != TP_INT) // type coercion
+              semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
+                        "' of type " + primTypeToStr(symbolType));
+      return symbolType;
+    }
+
+    if (symbolType.getType() != TP_ARRAY)
+      semerror("symbol '" + symbolId + "' is not of array type");
+    SymbolTableEntry arrayBaseType = symbolType.getArrayBaseType();
+    if (arrayBaseType != exprType)
+        if (arrayBaseType != TP_DOUBLE && exprType != TP_INT) // type coercion
+            semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
+                      "' of type " + primTypeToStr(symbolType.getArrayBaseType()));
+    return symbolType;
+}
 
   public SymbolTableEntry checkType(char operator, SymbolTableEntry leftType, SymbolTableEntry rightType) {
     switch(operator) {
