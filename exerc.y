@@ -223,29 +223,26 @@ ListaArgs : E ',' ListaArgs
     }
   }
 
-public SymbolTableEntry assign(String symbolId, SymbolTableEntry exprType, boolean isArray) {
+  public SymbolTableEntry assign(String symbolId, SymbolTableEntry exprType, boolean isArray) {
     if (!symbolTable.contains(symbolId))
         semerror("symbol '" + symbolId + "' not declared");
 
     SymbolTableEntry symbolType = symbolTable.get(symbolId);
-
-    if (!isArray) {
-      if (symbolType.getType() != exprType.getType())
-          if (symbolType.getType() != TP_DOUBLE && exprType.getType() != TP_INT) // type coercion
-              semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
-                        "' of type " + primTypeToStr(symbolType));
-      return symbolType;
+    if (isArray) {
+      if (symbolType.getType() != TP_ARRAY)
+        semerror("expected symbol '" + symbolId + "' to be of array type");
+      symbolType = symbolType.getArrayBaseType();
     }
 
-    if (symbolType.getType() != TP_ARRAY)
-      semerror("symbol '" + symbolId + "' is not of array type");
-    SymbolTableEntry arrayBaseType = symbolType.getArrayBaseType();
-    if (arrayBaseType != exprType)
-        if (arrayBaseType != TP_DOUBLE && exprType != TP_INT) // type coercion
-            semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
-                      "' of type " + primTypeToStr(symbolType.getArrayBaseType()));
+    if (symbolType.getType() == TP_DOUBLE && exprType.getType() == TP_INT) // allow type coercion in assignment
+      return symbolType;
+
+    if (symbolType.getType() != exprType.getType())
+      semerror("cannot assign expression of type " + primTypeToStr(exprType) + " to variable '" + symbolId +
+                "' of type " + primTypeToStr(symbolType));
+
     return symbolType;
-}
+  }
 
   public SymbolTableEntry checkType(char operator, SymbolTableEntry leftType, SymbolTableEntry rightType) {
     switch(operator) {
