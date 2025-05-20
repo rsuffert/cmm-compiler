@@ -23,12 +23,12 @@
 Prog : ListaDecl
      ;
 
-ListaDecl : {currentClass = SymbolTableEntry.Class.GLOBAL_VAR;} DeclVar ListaDecl
+ListaDecl : {currentClass = SymbolTable.Entry.Class.GLOBAL_VAR;} DeclVar ListaDecl
           | DeclFun ListaDecl
           | // vazio
           ;
 
-DeclVar : Tipo {currentType = (SymbolTableEntry)$1;} ListaIdent ';'
+DeclVar : Tipo {currentType = (SymbolTable.Entry)$1;} ListaIdent ';'
 
 Tipo : INT      {$$ = TP_INT;}
      | DOUBLE   {$$ = TP_DOUBLE;}
@@ -41,7 +41,7 @@ ListaIdent : IDENT ',' ListaIdent           {addSymbolToTable($1, false);}
            | IDENT '[' E ']'                {addSymbolToTable($1, true);}
            ;
 
-DeclFun : FUNC TipoOuVoid IDENT '(' FormalPar ')' '{' {currentClass = SymbolTableEntry.Class.LOCAL_VAR;} DeclVar ListaCmd '}' 
+DeclFun : FUNC TipoOuVoid IDENT '(' FormalPar ')' '{' {currentClass = SymbolTable.Entry.Class.LOCAL_VAR;} DeclVar ListaCmd '}' 
 
 TipoOuVoid : Tipo
            | VOID
@@ -65,15 +65,15 @@ Cmd : Bloco
     | WHILE '(' E ')' Cmd
     | IDENT '=' E ';' {
                         String symbolId = $1;
-                        SymbolTableEntry exprType = (SymbolTableEntry)$3;
+                        SymbolTable.Entry exprType = (SymbolTable.Entry)$3;
                         $$ = assign(symbolId, exprType, false);
                       }
     | IDENT '[' E ']' '=' E ';' {
-                                  SymbolTableEntry sizeType = (SymbolTableEntry)$3;
+                                  SymbolTable.Entry sizeType = (SymbolTable.Entry)$3;
                                   if (sizeType.getType() != TP_INT)
                                     semerror("array size must be of type int");
                                   String symbolId = $1;
-                                  SymbolTableEntry exprType = (SymbolTableEntry)$6;
+                                  SymbolTable.Entry exprType = (SymbolTable.Entry)$6;
                                   $$ = assign(symbolId, exprType, true);
                                 }
     | IF '(' E ')' Cmd RestoIf
@@ -84,19 +84,19 @@ RestoIf : ELSE Cmd
         | // vazio
         ;
 
-E : E '+' E {$$ = checkType('+', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
-  | E '-' E {$$ = checkType('-', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
-  | E '*' E {$$ = checkType('*', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
-  | E '/' E {$$ = checkType('/', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
-  | E '<' E {$$ = checkType('<', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
-  | E '>' E {$$ = checkType('>', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
-  | E LE E  {$$ = checkType((char)LE,  (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
-  | E GE E  {$$ = checkType((char)GE,  (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
-  | E EQ E  {$$ = checkType((char)EQ,  (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
-  | E NEQ E {$$ = checkType((char)NEQ, (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
-  | E AND E {$$ = checkType((char)AND, (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
-  | E OR E  {$$ = checkType((char)OR,  (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
-  | '!' E   {$$ = checkType('!', (SymbolTableEntry)$2, null);    }
+E : E '+' E {$$ = checkType('+', (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E '-' E {$$ = checkType('-', (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E '*' E {$$ = checkType('*', (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E '/' E {$$ = checkType('/', (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E '<' E {$$ = checkType('<', (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E '>' E {$$ = checkType('>', (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E LE E  {$$ = checkType((char)LE,  (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E GE E  {$$ = checkType((char)GE,  (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E EQ E  {$$ = checkType((char)EQ,  (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E NEQ E {$$ = checkType((char)NEQ, (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E AND E {$$ = checkType((char)AND, (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E OR E  {$$ = checkType((char)OR,  (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | '!' E   {$$ = checkType('!', (SymbolTable.Entry)$2, null);    }
   | INT_LITERAL    {$$ = TP_INT;}
   | DOUBLE_LITERAL {$$ = TP_DOUBLE;}
   | TRUE           {$$ = TP_BOOLEAN;}
@@ -105,10 +105,10 @@ E : E '+' E {$$ = checkType('+', (SymbolTableEntry)$1, (SymbolTableEntry)$3);}
                       String symbolId = $1;
                       if (!symbolTable.contains(symbolId))
                         semerror("symbol '" + symbolId + "' not declared");
-                      SymbolTableEntry symbolType = symbolTable.get(symbolId);
+                      SymbolTable.Entry symbolType = symbolTable.get(symbolId);
                       if (symbolType.getType() != TP_ARRAY)
                         semerror("symbol '" + symbolId + "' is not of array type (not indexable)");
-                      SymbolTableEntry sizeType = (SymbolTableEntry)$3;
+                      SymbolTable.Entry sizeType = (SymbolTable.Entry)$3;
                       if (sizeType.getType() != TP_INT)
                         semerror("array size must be of type int");
                       $$ = symbolType;
@@ -132,13 +132,13 @@ ListaArgs : E ',' ListaArgs
   private Yylex lexer;
   private SymbolTable symbolTable = new SymbolTable();
 
-  private SymbolTableEntry currentType;
-  private SymbolTableEntry.Class currentClass;
+  private SymbolTable.Entry currentType;
+  private SymbolTable.Entry.Class currentClass;
 
-  public static final SymbolTableEntry TP_INT = new SymbolTableEntry(null, SymbolTableEntry.Class.PRIM_TYPE);
-  public static final SymbolTableEntry TP_DOUBLE = new SymbolTableEntry(null, SymbolTableEntry.Class.PRIM_TYPE);
-  public static final SymbolTableEntry TP_BOOLEAN = new SymbolTableEntry(null, SymbolTableEntry.Class.PRIM_TYPE);
-  public static final SymbolTableEntry TP_ARRAY = new SymbolTableEntry(null, SymbolTableEntry.Class.PRIM_TYPE);
+  public static final SymbolTable.Entry TP_INT = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
+  public static final SymbolTable.Entry TP_DOUBLE = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
+  public static final SymbolTable.Entry TP_BOOLEAN = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
+  public static final SymbolTable.Entry TP_ARRAY = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
 
   private int yylex () {
     int yyl_return = -1;
@@ -180,11 +180,11 @@ ListaArgs : E ',' ListaArgs
     yydebug = debug;
   }
 
-  public boolean isNumeric(SymbolTableEntry type) {
+  public boolean isNumeric(SymbolTable.Entry type) {
     return type == TP_INT || type == TP_DOUBLE;
   }
 
-  public String primTypeToStr(SymbolTableEntry type) {
+  public String primTypeToStr(SymbolTable.Entry type) {
     if (type.getType() == TP_INT)
       return "int";
     if (type.getType() == TP_DOUBLE)
@@ -213,9 +213,9 @@ ListaArgs : E ',' ListaArgs
   }
 
   public void addSymbolToTable(String symbolId, boolean isArray) {
-    SymbolTableEntry symbolType = new SymbolTableEntry(currentType, currentClass);
+    SymbolTable.Entry symbolType = new SymbolTable.Entry(currentType, currentClass);
     if (isArray)
-      symbolType = new SymbolTableEntry(currentType, TP_ARRAY, currentClass);
+      symbolType = new SymbolTable.Entry(currentType, TP_ARRAY, currentClass);
     try {
       symbolTable.add(symbolId, symbolType);
     } catch (IllegalArgumentException e) {
@@ -223,11 +223,11 @@ ListaArgs : E ',' ListaArgs
     }
   }
 
-  public SymbolTableEntry assign(String symbolId, SymbolTableEntry exprType, boolean isArray) {
+  public SymbolTable.Entry assign(String symbolId, SymbolTable.Entry exprType, boolean isArray) {
     if (!symbolTable.contains(symbolId))
         semerror("symbol '" + symbolId + "' not declared");
 
-    SymbolTableEntry symbolType = symbolTable.get(symbolId);
+    SymbolTable.Entry symbolType = symbolTable.get(symbolId);
     if (isArray) {
       if (symbolType.getType() != TP_ARRAY)
         semerror("expected symbol '" + symbolId + "' to be of array type");
@@ -244,7 +244,7 @@ ListaArgs : E ',' ListaArgs
     return symbolType;
   }
 
-  public SymbolTableEntry checkType(char operator, SymbolTableEntry leftType, SymbolTableEntry rightType) {
+  public SymbolTable.Entry checkType(char operator, SymbolTable.Entry leftType, SymbolTable.Entry rightType) {
     switch(operator) {
       case '+':
       case '-':
