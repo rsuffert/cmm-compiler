@@ -63,19 +63,8 @@ ListaCmd : Cmd ListaCmd
 
 Cmd : Bloco
     | WHILE '(' E ')' Cmd
-    | IDENT '=' E ';' {
-                        String symbolId = $1;
-                        SymbolTable.Entry exprType = (SymbolTable.Entry)$3;
-                        $$ = assign(symbolId, exprType, false);
-                      }
-    | IDENT '[' E ']' '=' E ';' {
-                                  SymbolTable.Entry sizeType = (SymbolTable.Entry)$3;
-                                  if (sizeType.getType() != TP_INT)
-                                    semerror("array size must be of type int");
-                                  String symbolId = $1;
-                                  SymbolTable.Entry exprType = (SymbolTable.Entry)$6;
-                                  $$ = assign(symbolId, exprType, true);
-                                }
+    | IDENT '=' E ';'           {$$ = assign($1, (SymbolTable.Entry)$3, false, null);}
+    | IDENT '[' E ']' '=' E ';' {$$ = assign($1, (SymbolTable.Entry)$6, true, (SymbolTable.Entry)$3);}
     | IF '(' E ')' Cmd RestoIf
     | RETURN E ';'
     ;
@@ -84,41 +73,25 @@ RestoIf : ELSE Cmd
         | // vazio
         ;
 
-E : E '+' E {$$ = checkType('+', (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
-  | E '-' E {$$ = checkType('-', (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
-  | E '*' E {$$ = checkType('*', (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
-  | E '/' E {$$ = checkType('/', (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
-  | E '<' E {$$ = checkType('<', (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
-  | E '>' E {$$ = checkType('>', (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+E : E '+' E {$$ = checkType('+',       (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E '-' E {$$ = checkType('-',       (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E '*' E {$$ = checkType('*',       (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E '/' E {$$ = checkType('/',       (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E '<' E {$$ = checkType('<',       (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
+  | E '>' E {$$ = checkType('>',       (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
   | E LE E  {$$ = checkType((char)LE,  (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
   | E GE E  {$$ = checkType((char)GE,  (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
   | E EQ E  {$$ = checkType((char)EQ,  (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
   | E NEQ E {$$ = checkType((char)NEQ, (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
   | E AND E {$$ = checkType((char)AND, (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
   | E OR E  {$$ = checkType((char)OR,  (SymbolTable.Entry)$1, (SymbolTable.Entry)$3);}
-  | '!' E   {$$ = checkType('!', (SymbolTable.Entry)$2, null);    }
-  | INT_LITERAL    {$$ = TP_INT;}
-  | DOUBLE_LITERAL {$$ = TP_DOUBLE;}
-  | TRUE           {$$ = TP_BOOLEAN;}
-  | FALSE          {$$ = TP_BOOLEAN;}
-  | IDENT '[' E ']' {
-                      String symbolId = $1;
-                      if (!symbolTable.contains(symbolId))
-                        semerror("symbol '" + symbolId + "' not declared");
-                      SymbolTable.Entry symbolType = symbolTable.get(symbolId);
-                      if (symbolType.getType() != TP_ARRAY)
-                        semerror("symbol '" + symbolId + "' is not of array type (not indexable)");
-                      SymbolTable.Entry sizeType = (SymbolTable.Entry)$3;
-                      if (sizeType.getType() != TP_INT)
-                        semerror("array size must be of type int");
-                      $$ = symbolType;
-                    }
-  | IDENT   {
-              String symbolId = $1;
-              if (!symbolTable.contains(symbolId))
-                semerror("symbol '" + symbolId + "' not declared");
-              $$ = symbolTable.get(symbolId);                
-            }
+  | '!' E   {$$ = checkType('!',       (SymbolTable.Entry)$2, null);}
+  | INT_LITERAL     {$$ = TP_INT;}
+  | DOUBLE_LITERAL  {$$ = TP_DOUBLE;}
+  | TRUE            {$$ = TP_BOOLEAN;}
+  | FALSE           {$$ = TP_BOOLEAN;}
+  | IDENT '[' E ']' {$$ = access($1, true, (SymbolTable.Entry)$3);}
+  | IDENT           {$$ = access($1, false, null);}
   | '(' E ')'
   | IDENT '(' ListaArgs ')' // chamada de funcao
   ;
@@ -223,7 +196,7 @@ ListaArgs : E ',' ListaArgs
     }
   }
 
-  public SymbolTable.Entry assign(String symbolId, SymbolTable.Entry exprType, boolean isArray) {
+  public SymbolTable.Entry assign(String symbolId, SymbolTable.Entry exprType, boolean isArray, SymbolTable.Entry arraySizeType) {
     if (!symbolTable.contains(symbolId))
         semerror("symbol '" + symbolId + "' not declared");
 
@@ -231,6 +204,8 @@ ListaArgs : E ',' ListaArgs
     if (isArray) {
       if (symbolType.getType() != TP_ARRAY)
         semerror("expected symbol '" + symbolId + "' to be of array type");
+      if (arraySizeType.getType() != TP_INT)
+        semerror("array size must be of type int");
       symbolType = symbolType.getArrayBaseType();
     }
 
@@ -242,6 +217,21 @@ ListaArgs : E ',' ListaArgs
                 "' of type " + primTypeToStr(symbolType));
 
     return symbolType;
+  }
+
+  public SymbolTable.Entry access(String symbolId, boolean isArray, SymbolTable.Entry arrayIdxType) {
+    if (!symbolTable.contains(symbolId))
+      semerror("symbol '" + symbolId + "' not declared");
+
+    SymbolTable.Entry symbolType = symbolTable.get(symbolId);
+
+    if (!isArray) return symbolType;
+
+    if (symbolType.getType() != TP_ARRAY)
+      semerror("expected symbol '" + symbolId + "' to be of array type");
+    if (arrayIdxType.getType() != TP_INT)
+      semerror("array index must be of type int");
+    return symbolType.getArrayBaseType();
   }
 
   public SymbolTable.Entry checkType(char operator, SymbolTable.Entry leftType, SymbolTable.Entry rightType) {
