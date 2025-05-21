@@ -1,0 +1,5 @@
+func int foo() {    
+    double a;
+    a = 1;
+    return a;
+}

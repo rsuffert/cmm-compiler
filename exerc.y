@@ -8,6 +8,7 @@
 %type <obj> E
 %type <obj> Cmd
 %type <sval> IDENT
+%type <obj> TipoOuVoid
 
 %right '='
 %left OR
@@ -41,10 +42,19 @@ ListaIdent : IDENT ',' ListaIdent           {addSymbolToTable($1, false);}
            | IDENT '[' E ']'                {addSymbolToTable($1, true);}
            ;
 
-DeclFun : FUNC TipoOuVoid IDENT '(' FormalPar ')' '{' {currentClass = SymbolTable.Entry.Class.LOCAL_VAR;} DeclVar ListaCmd '}' 
+DeclFun : FUNC TipoOuVoid IDENT {
+                                  String funcName = $3;
+                                  if (symbolTable.contains(funcName))
+                                    semerror("function '" + funcName + "' already declared");
+                                  SymbolTable.Entry funcEntry = new SymbolTable.Entry((SymbolTable.Entry)$2, SymbolTable.Entry.Class.FUNCTION);
+                                  symbolTable.add(funcName, funcEntry);
+                                  currentScopeId = funcName;
+                                }
+          '(' FormalPar ')'
+          '{' DeclVar ListaCmd '}' 
 
 TipoOuVoid : Tipo
-           | VOID
+           | VOID {$$ = TP_VOID;}
            ;
 
 FormalPar : ParamList
@@ -66,7 +76,16 @@ Cmd : Bloco
     | IDENT '=' E ';'           {$$ = assign($1, (SymbolTable.Entry)$3, false, null);}
     | IDENT '[' E ']' '=' E ';' {$$ = assign($1, (SymbolTable.Entry)$6, true, (SymbolTable.Entry)$3);}
     | IF '(' E ')' Cmd RestoIf
-    | RETURN E ';'
+    | RETURN E ';' {
+                      SymbolTable.Entry currentScopeEntry = symbolTable.get(currentScopeId);
+                      SymbolTable.Entry returnType = currentScopeEntry.getType();
+                      SymbolTable.Entry exprType = (SymbolTable.Entry)$2;
+                      if (returnType.getType() == TP_VOID)
+                        semerror("function '" + currentScopeId + "' is void, but is returning a value of type "+ primTypeToStr(exprType));
+                      if (returnType.getType() != exprType.getType())
+                        semerror("expected return type " + primTypeToStr(currentScopeEntry) + " for function '" + currentScopeId +
+                                 "' but found " + primTypeToStr(exprType));
+                    }
     ;
 
 RestoIf : ELSE Cmd
@@ -107,10 +126,12 @@ ListaArgs : E ',' ListaArgs
 
   private SymbolTable.Entry currentType;
   private SymbolTable.Entry.Class currentClass;
+  private String currentScopeId;
 
   public static final SymbolTable.Entry TP_INT = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
   public static final SymbolTable.Entry TP_DOUBLE = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
   public static final SymbolTable.Entry TP_BOOLEAN = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
+  public static final SymbolTable.Entry TP_VOID = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
   public static final SymbolTable.Entry TP_ARRAY = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
 
   private int yylex () {
