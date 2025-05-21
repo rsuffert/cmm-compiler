@@ -61,8 +61,8 @@ FormalPar : ParamList
           | // vazio
           ;
 
-ParamList : Tipo IDENT ',' ParamList
-          | Tipo IDENT
+ParamList : Tipo IDENT ',' ParamList {addParamToCurrentScope((SymbolTable.Entry)$1, $2);}
+          | Tipo IDENT               {addParamToCurrentScope((SymbolTable.Entry)$1, $2);}
           ;
 
 Bloco : '{' ListaCmd '}'
@@ -215,6 +215,14 @@ ListaArgs : E ',' ListaArgs
     } catch (IllegalArgumentException e) {
       semerror(e.getMessage());
     }
+  }
+
+  public void addParamToCurrentScope(SymbolTable.Entry paramEntry, String paramName) {
+    SymbolTable.Entry currentScopeEntry = symbolTable.get(currentScopeId);
+    SymbolTable.Entry paramType = new SymbolTable.Entry(paramEntry, SymbolTable.Entry.Class.PARAM_VAR);
+    if (currentScopeEntry.containsParam(paramName))
+      semerror("parameter '" + paramName + "' already declared in the '" + currentScopeId + "' scope");
+    currentScopeEntry.addParam(paramName, paramType);
   }
 
   public SymbolTable.Entry assign(String symbolId, SymbolTable.Entry exprType, boolean isArray, SymbolTable.Entry arraySizeType) {

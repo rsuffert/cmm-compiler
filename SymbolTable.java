@@ -34,7 +34,7 @@ public class SymbolTable {
     }
 
     public static class Entry {
-        public enum Class { LOCAL_VAR, GLOBAL_VAR, FUNCTION, PRIM_TYPE }
+        public enum Class { LOCAL_VAR, GLOBAL_VAR, PARAM_VAR, FUNCTION, PRIM_TYPE }
     
         // ========================== MEMBERS FOR PRIMITIVE SYMBOLS ==========================
         private Entry type;
@@ -66,6 +66,21 @@ public class SymbolTable {
             return arrayBaseType;
         }
     
+        // ========================== MEMBERS FOR FUNCTION SYMBOLS ==========================
+        private SymbolTable paramsSymbolTable = new SymbolTable();
+
+        public boolean containsParam(String name) {
+            return paramsSymbolTable.contains(name);
+        }
+
+        public Entry getParam(String name) {
+            return paramsSymbolTable.get(name);
+        }
+
+        public void addParam(String name, Entry entry) {
+            paramsSymbolTable.add(name, entry);
+        }
+
         // ========================== MEMBERS FOR THE CLASS ==========================
         public String toString() {
             return String.format("%s {TYPE = %s, CLS = %s}", getClass().getName(), type, cls);
