@@ -23,12 +23,10 @@ WHSPACE=[\n\r\ \t\b\012]
 "$TRACE_ON"  { yyparser.setDebug(true);  }
 "$TRACE_OFF" { yyparser.setDebug(false); }
 
-
 int { return Parser.INT; }
 double { return Parser.DOUBLE; }
 boolean { return Parser.BOOLEAN; }
 void { return Parser.VOID; }
-/* new { return Parser.NEW; } */
 
 func { return Parser.FUNC; }
 while { return Parser.WHILE; }
@@ -36,8 +34,8 @@ if { return Parser.IF; }
 else { return Parser.ELSE; }
 return { return Parser.RETURN; }
 
-
-
+true {return Parser.TRUE; }
+false {return Parser.FALSE; }
 
 "||" { return Parser.OR; }
 "&&" { return Parser.AND; }
@@ -46,10 +44,20 @@ return { return Parser.RETURN; }
 "<=" { return Parser.LE; }
 ">=" { return Parser.GE; }
 
+[0-9]+\.[0-9]+ {
+  yyparser.yylval = new ParserVal(Double.parseDouble(yytext()));
+  return Parser.DOUBLE_LITERAL;
+}
 
+[0-9]+ {
+  yyparser.yylval = new ParserVal(Integer.parseInt(yytext()));
+  return Parser.INT_LITERAL;
+}
 
-[0-9]+(\.[0-9]+)? { return Parser.NUM;}
-[a-zA-Z][a-zA-Z0-9]* { return Parser.IDENT;}
+[a-zA-Z][a-zA-Z0-9]* {
+  yyparser.yylval = new ParserVal(yytext());
+  return Parser.IDENT;
+}
 
 ";" |
 "(" |
