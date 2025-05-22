@@ -84,6 +84,7 @@ Cmd : Bloco
     | IDENT '[' E ']' '=' E ';' {$$ = assign($1, (SymbolTable.Entry)$6, currentScope, true, (SymbolTable.Entry)$3);}
     | IF '(' E ')' Cmd RestoIf
     | RETURN E ';'              {checkReturnType(currentScope, (SymbolTable.Entry)$2);}
+    | IDENT '(' ListaArgs ')' ';' // chamada de funcao (procedimento, sem atribuir valor de retorno)
     ;
 
 RestoIf : ELSE Cmd
