@@ -84,6 +84,7 @@ Cmd : Bloco
     | IDENT '[' E ']' '=' E ';' {$$ = assign($1, (SymbolTable.Entry)$6, currentScope, true, (SymbolTable.Entry)$3);}
     | IF '(' E ')' Cmd RestoIf
     | RETURN E ';'              {checkReturnType(currentScope, (SymbolTable.Entry)$2);}
+    | RETURN ';'                {checkReturnType(currentScope, TP_VOID);}
     | IDENT '(' ListaArgs ')' ';' // chamada de funcao (procedimento, sem atribuir valor de retorno)
     ;
 
@@ -227,7 +228,9 @@ ListaArgs : E ',' ListaArgs
 
   public void checkReturnType(SymbolTable.Entry scope, SymbolTable.Entry exprType) {
     SymbolTable.Entry returnType = scope.getType();
-    if (returnType.getType() == TP_VOID || returnType.getType() != exprType)
+    if (returnType.getType() == TP_VOID && exprType.getType() == TP_VOID) // allow empty return for void functions
+      return;
+    if (returnType.getType() != exprType.getType())
       semerror("function of type " + primTypeToStr(returnType) + " attempted to return a value of type " + primTypeToStr(exprType));
   }
 
