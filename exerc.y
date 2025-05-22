@@ -220,9 +220,9 @@ ListaArgs : E ',' ListaArgs
   public void addParamToCurrentScope(SymbolTable.Entry paramEntry, String paramName) {
     SymbolTable.Entry currentScopeEntry = symbolTable.get(currentScopeId);
     SymbolTable.Entry paramType = new SymbolTable.Entry(paramEntry, SymbolTable.Entry.Class.PARAM_VAR);
-    if (currentScopeEntry.containsParam(paramName))
+    if (currentScopeEntry.getFuncSymbolTable().contains(paramName))
       semerror("parameter '" + paramName + "' already declared in the '" + currentScopeId + "' scope");
-    currentScopeEntry.addParam(paramName, paramType);
+    currentScopeEntry.getFuncSymbolTable().add(paramName, paramType);
   }
 
   public SymbolTable.Entry assign(String symbolId, SymbolTable.Entry exprType, boolean isArray, SymbolTable.Entry arraySizeType) {

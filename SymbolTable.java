@@ -67,18 +67,10 @@ public class SymbolTable {
         }
     
         // ========================== MEMBERS FOR FUNCTION SYMBOLS ==========================
-        private SymbolTable paramsSymbolTable = new SymbolTable();
+        private SymbolTable funcSymbolTable = new SymbolTable();
 
-        public boolean containsParam(String name) {
-            return paramsSymbolTable.contains(name);
-        }
-
-        public Entry getParam(String name) {
-            return paramsSymbolTable.get(name);
-        }
-
-        public void addParam(String name, Entry entry) {
-            paramsSymbolTable.add(name, entry);
+        public SymbolTable getFuncSymbolTable() {
+            return funcSymbolTable;
         }
 
         // ========================== MEMBERS FOR THE CLASS ==========================
