@@ -240,6 +240,9 @@ ListaArgs : E ',' ListaArgs
     else
         semerror("symbol '" + symbolId + "' not declared");
 
+    if (symbolType.getCls() == SymbolTable.Entry.Class.FUNCTION)
+      semerror("cannot assign to symbol '" + symbolId + "' because it's a function");
+
     if (isArray) {
       if (symbolType.getType() != TP_ARRAY)
         semerror("expected symbol '" + symbolId + "' to be of array type");
