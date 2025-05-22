@@ -80,8 +80,8 @@ ListaCmd : Cmd ListaCmd
 
 Cmd : Bloco
     | WHILE '(' E ')' Cmd
-    | IDENT '=' E ';'           {$$ = assign($1, (SymbolTable.Entry)$3, false, null);}
-    | IDENT '[' E ']' '=' E ';' {$$ = assign($1, (SymbolTable.Entry)$6, true, (SymbolTable.Entry)$3);}
+    | IDENT '=' E ';'           {$$ = assign($1, (SymbolTable.Entry)$3, currentScope, false, null);}
+    | IDENT '[' E ']' '=' E ';' {$$ = assign($1, (SymbolTable.Entry)$6, currentScope, true, (SymbolTable.Entry)$3);}
     | IF '(' E ')' Cmd RestoIf
     | RETURN E ';'              {checkReturnType(currentScope, (SymbolTable.Entry)$2);}
     ;
@@ -107,8 +107,8 @@ E : E '+' E {$$ = checkType('+',       (SymbolTable.Entry)$1, (SymbolTable.Entry
   | DOUBLE_LITERAL  {$$ = TP_DOUBLE;}
   | TRUE            {$$ = TP_BOOLEAN;}
   | FALSE           {$$ = TP_BOOLEAN;}
-  | IDENT '[' E ']' {$$ = access($1, true, (SymbolTable.Entry)$3);}
-  | IDENT           {$$ = access($1, false, null);}
+  | IDENT '[' E ']' {$$ = access($1, currentScope, true, (SymbolTable.Entry)$3);}
+  | IDENT           {$$ = access($1, currentScope, false, null);}
   | '(' E ')'
   | IDENT '(' ListaArgs ')' // chamada de funcao
   ;
@@ -218,10 +218,10 @@ ListaArgs : E ',' ListaArgs
     if (scope != null)
       _symbolTable = scope.getInternalSymbolTable();
 
-    try { _symbolTable.add(symbolId, _symbolType);} 
-    catch (IllegalArgumentException e) {
-      semerror(e.getMessage());
-    }
+    if (_symbolTable.contains(symbolId))
+      semerror("symbol '" + symbolId + "' already declared in this scope");
+
+    _symbolTable.add(symbolId, _symbolType);
   }
 
   public void checkReturnType(SymbolTable.Entry scope, SymbolTable.Entry exprType) {
@@ -230,11 +230,15 @@ ListaArgs : E ',' ListaArgs
       semerror("function of type " + primTypeToStr(returnType) + " attempted to return a value of type " + primTypeToStr(exprType));
   }
 
-  public SymbolTable.Entry assign(String symbolId, SymbolTable.Entry exprType, boolean isArray, SymbolTable.Entry arraySizeType) {
-    if (!symbolTable.contains(symbolId))
+  public SymbolTable.Entry assign(String symbolId, SymbolTable.Entry exprType, SymbolTable.Entry scope, boolean isArray, SymbolTable.Entry arraySizeType) {
+    SymbolTable.Entry symbolType = null;
+    if (scope != null && scope.getInternalSymbolTable().contains(symbolId))
+      symbolType = scope.getInternalSymbolTable().get(symbolId);
+    else if (symbolTable.contains(symbolId))
+      symbolType = symbolTable.get(symbolId);
+    else
         semerror("symbol '" + symbolId + "' not declared");
 
-    SymbolTable.Entry symbolType = symbolTable.get(symbolId);
     if (isArray) {
       if (symbolType.getType() != TP_ARRAY)
         semerror("expected symbol '" + symbolId + "' to be of array type");
@@ -253,11 +257,14 @@ ListaArgs : E ',' ListaArgs
     return symbolType;
   }
 
-  public SymbolTable.Entry access(String symbolId, boolean isArray, SymbolTable.Entry arrayIdxType) {
-    if (!symbolTable.contains(symbolId))
-      semerror("symbol '" + symbolId + "' not declared");
-
-    SymbolTable.Entry symbolType = symbolTable.get(symbolId);
+  public SymbolTable.Entry access(String symbolId, SymbolTable.Entry scope, boolean isArray, SymbolTable.Entry arrayIdxType) {
+    SymbolTable.Entry symbolType = null;
+    if (scope != null && scope.getInternalSymbolTable().contains(symbolId))
+      symbolType = scope.getInternalSymbolTable().get(symbolId);
+    else if (symbolTable.contains(symbolId))
+      symbolType = symbolTable.get(symbolId);
+    else
+        semerror("symbol '" + symbolId + "' not declared");
 
     if (!isArray) return symbolType;
 
