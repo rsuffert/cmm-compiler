@@ -69,7 +69,7 @@ public class SymbolTable {
         // ========================== MEMBERS FOR FUNCTION SYMBOLS ==========================
         private SymbolTable funcSymbolTable = new SymbolTable();
 
-        public SymbolTable getFuncSymbolTable() {
+        public SymbolTable getInternalSymbolTable() {
             return funcSymbolTable;
         }
 

@@ -36,22 +36,21 @@ Tipo : INT      {$$ = TP_INT;}
      | BOOLEAN  {$$ = TP_BOOLEAN;}
      ;
 
-ListaIdent : IDENT ',' ListaIdent           {addSymbolToTable($1, false);}
-           | IDENT '[' E ']' ',' ListaIdent {addSymbolToTable($1, true);}
-           | IDENT                          {addSymbolToTable($1, false);}
-           | IDENT '[' E ']'                {addSymbolToTable($1, true);}
+ListaIdent : IDENT ',' ListaIdent           {addSymbolToTable($1, currentType, currentScope, currentClass, false);}
+           | IDENT '[' E ']' ',' ListaIdent {addSymbolToTable($1, currentType, currentScope, currentClass, true);}
+           | IDENT                          {addSymbolToTable($1, currentType, currentScope, currentClass, false);}
+           | IDENT '[' E ']'                {addSymbolToTable($1, currentType, currentScope, currentClass, true);}
            ;
 
 DeclFun : FUNC TipoOuVoid IDENT {
-                                  String funcName = $3;
-                                  if (symbolTable.contains(funcName))
-                                    semerror("function '" + funcName + "' already declared");
-                                  SymbolTable.Entry funcEntry = new SymbolTable.Entry((SymbolTable.Entry)$2, SymbolTable.Entry.Class.FUNCTION);
-                                  symbolTable.add(funcName, funcEntry);
-                                  currentScopeId = funcName;
+                                  currentClass = SymbolTable.Entry.Class.FUNCTION;
+                                  currentType = (SymbolTable.Entry)$2;
+                                  addSymbolToTable($3, currentType, currentScope, currentClass, false);
+                                  currentScope = symbolTable.get($3);
                                 }
           '(' FormalPar ')'
-          '{' DeclVar ListaCmd '}' 
+          '{' DeclVar ListaCmd '}' {currentScope = null;}
+        ;
 
 TipoOuVoid : Tipo
            | VOID {$$ = TP_VOID;}
@@ -61,8 +60,16 @@ FormalPar : ParamList
           | // vazio
           ;
 
-ParamList : Tipo IDENT ',' ParamList {addParamToCurrentScope((SymbolTable.Entry)$1, $2);}
-          | Tipo IDENT               {addParamToCurrentScope((SymbolTable.Entry)$1, $2);}
+ParamList : Tipo IDENT ',' ParamList  {
+                                        currentType = (SymbolTable.Entry)$1;
+                                        currentClass = SymbolTable.Entry.Class.PARAM_VAR;
+                                        addSymbolToTable($2, currentType, currentScope, currentClass, false);
+                                      }
+          | Tipo IDENT {
+                          currentType = (SymbolTable.Entry)$1;
+                          currentClass = SymbolTable.Entry.Class.PARAM_VAR;
+                          addSymbolToTable($2, currentType, currentScope, currentClass, false);
+                       }
           ;
 
 Bloco : '{' ListaCmd '}'
@@ -76,16 +83,7 @@ Cmd : Bloco
     | IDENT '=' E ';'           {$$ = assign($1, (SymbolTable.Entry)$3, false, null);}
     | IDENT '[' E ']' '=' E ';' {$$ = assign($1, (SymbolTable.Entry)$6, true, (SymbolTable.Entry)$3);}
     | IF '(' E ')' Cmd RestoIf
-    | RETURN E ';' {
-                      SymbolTable.Entry currentScopeEntry = symbolTable.get(currentScopeId);
-                      SymbolTable.Entry returnType = currentScopeEntry.getType();
-                      SymbolTable.Entry exprType = (SymbolTable.Entry)$2;
-                      if (returnType.getType() == TP_VOID)
-                        semerror("function '" + currentScopeId + "' is void, but is returning a value of type "+ primTypeToStr(exprType));
-                      if (returnType.getType() != exprType.getType())
-                        semerror("expected return type " + primTypeToStr(currentScopeEntry) + " for function '" + currentScopeId +
-                                 "' but found " + primTypeToStr(exprType));
-                    }
+    | RETURN E ';'              {checkReturnType(currentScope, (SymbolTable.Entry)$2);}
     ;
 
 RestoIf : ELSE Cmd
@@ -126,7 +124,7 @@ ListaArgs : E ',' ListaArgs
 
   private SymbolTable.Entry currentType;
   private SymbolTable.Entry.Class currentClass;
-  private String currentScopeId;
+  private SymbolTable.Entry currentScope;
 
   public static final SymbolTable.Entry TP_INT = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
   public static final SymbolTable.Entry TP_DOUBLE = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
@@ -185,6 +183,8 @@ ListaArgs : E ',' ListaArgs
       return "double";
     if (type.getType() == TP_BOOLEAN)
       return "boolean";
+    if (type.getType() == TP_VOID)
+      return "void";
     if (type.getType() == TP_ARRAY)
       return primTypeToStr(type.getArrayBaseType()) + "[]";
     throw new IllegalArgumentException("Unknown type: " + type);
@@ -206,23 +206,28 @@ ListaArgs : E ',' ListaArgs
     }
   }
 
-  public void addSymbolToTable(String symbolId, boolean isArray) {
-    SymbolTable.Entry symbolType = new SymbolTable.Entry(currentType, currentClass);
+  public void addSymbolToTable(
+      String symbolId, SymbolTable.Entry symbolType,
+      SymbolTable.Entry scope, SymbolTable.Entry.Class cls,
+      boolean isArray) {
+    SymbolTable.Entry _symbolType = symbolType;
     if (isArray)
-      symbolType = new SymbolTable.Entry(currentType, TP_ARRAY, currentClass);
-    try {
-      symbolTable.add(symbolId, symbolType);
-    } catch (IllegalArgumentException e) {
+      _symbolType = new SymbolTable.Entry(symbolType, TP_ARRAY, cls);
+
+    SymbolTable _symbolTable = symbolTable;
+    if (scope != null)
+      _symbolTable = scope.getInternalSymbolTable();
+
+    try { _symbolTable.add(symbolId, _symbolType);} 
+    catch (IllegalArgumentException e) {
       semerror(e.getMessage());
     }
   }
 
-  public void addParamToCurrentScope(SymbolTable.Entry paramEntry, String paramName) {
-    SymbolTable.Entry currentScopeEntry = symbolTable.get(currentScopeId);
-    SymbolTable.Entry paramType = new SymbolTable.Entry(paramEntry, SymbolTable.Entry.Class.PARAM_VAR);
-    if (currentScopeEntry.getFuncSymbolTable().contains(paramName))
-      semerror("parameter '" + paramName + "' already declared in the '" + currentScopeId + "' scope");
-    currentScopeEntry.getFuncSymbolTable().add(paramName, paramType);
+  public void checkReturnType(SymbolTable.Entry scope, SymbolTable.Entry exprType) {
+    SymbolTable.Entry returnType = scope.getType();
+    if (returnType.getType() == TP_VOID || returnType.getType() != exprType)
+      semerror("function of type " + primTypeToStr(returnType) + " attempted to return a value of type " + primTypeToStr(exprType));
   }
 
   public SymbolTable.Entry assign(String symbolId, SymbolTable.Entry exprType, boolean isArray, SymbolTable.Entry arraySizeType) {
