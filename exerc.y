@@ -270,7 +270,7 @@ ListaArgs : E ',' ListaArgs
     else
         semerror("symbol '" + symbolId + "' not declared");
 
-    if (!isArray) return symbolType;
+    if (!isArray) return symbolType.getType();
 
     if (symbolType.getType() != TP_ARRAY)
       semerror("expected symbol '" + symbolId + "' to be of array type");
