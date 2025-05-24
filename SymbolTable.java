@@ -1,5 +1,7 @@
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.LinkedList;
 
 public class SymbolTable {
     private final Map<String, Entry> symbols;
@@ -68,9 +70,22 @@ public class SymbolTable {
     
         // ========================== MEMBERS FOR FUNCTION SYMBOLS ==========================
         private SymbolTable funcSymbolTable = new SymbolTable();
+        private List<String> funcParamNames = new LinkedList<>();
 
         public SymbolTable getInternalSymbolTable() {
             return funcSymbolTable;
+        }
+
+        public String getFuncParamName(int idx) {
+            return funcParamNames.get(idx);
+        }
+
+        public void appendFuncParamName(String name) {
+            funcParamNames.add(name);
+        }
+
+        public int getFuncParamsCount() {
+            return funcParamNames.size();
         }
 
         // ========================== MEMBERS FOR THE CLASS ==========================

@@ -64,14 +64,16 @@ FormalPar : ParamList
           | // vazio
           ;
 
-ParamList : Tipo IDENT ',' ParamList  {
-                                        currentType = (SymbolTable.Entry)$1;
-                                        currentClass = SymbolTable.Entry.Class.PARAM_VAR;
-                                        addSymbolToTable($2, currentType, currentScope, currentClass, false);
-                                      }
+ParamList : Tipo IDENT {
+                          currentType = (SymbolTable.Entry)$1;
+                          currentClass = SymbolTable.Entry.Class.PARAM_VAR;
+                          currentScope.appendFuncParamName($2);
+                          addSymbolToTable($2, currentType, currentScope, currentClass, false);
+                       } ',' ParamList 
           | Tipo IDENT {
                           currentType = (SymbolTable.Entry)$1;
                           currentClass = SymbolTable.Entry.Class.PARAM_VAR;
+                          currentScope.appendFuncParamName($2);
                           addSymbolToTable($2, currentType, currentScope, currentClass, false);
                        }
           ;
