@@ -48,8 +48,12 @@ DeclFun : FUNC TipoOuVoid IDENT {
                                   addSymbolToTable($3, currentType, currentScope, currentClass, false);
                                   currentScope = symbolTable.get($3);
                                 }
-          '(' FormalPar ')'
-          '{' DeclVar ListaCmd '}' {currentScope = null;}
+          '(' FormalPar ')' '{'
+            {currentClass = SymbolTable.Entry.Class.LOCAL_VAR;}
+            DeclVar
+            ListaCmd 
+          '}' 
+          {currentScope = null;}
         ;
 
 TipoOuVoid : Tipo
@@ -215,6 +219,8 @@ ListaArgs : E ',' ListaArgs
     SymbolTable.Entry _symbolType = symbolType;
     if (isArray)
       _symbolType = new SymbolTable.Entry(symbolType, TP_ARRAY, cls);
+    else if (cls == SymbolTable.Entry.Class.FUNCTION)
+      _symbolType = new SymbolTable.Entry(symbolType, cls);
 
     SymbolTable _symbolTable = symbolTable;
     if (scope != null)
