@@ -9,6 +9,7 @@
 %type <obj> Cmd
 %type <sval> IDENT
 %type <obj> TipoOuVoid
+%type <obj> FuncCall
 
 %right '='
 %left OR
@@ -91,7 +92,7 @@ Cmd : Bloco
     | IF '(' E ')' Cmd RestoIf
     | RETURN E ';'              {checkReturnType(currentScope, (SymbolTable.Entry)$2);}
     | RETURN ';'                {checkReturnType(currentScope, TP_VOID);}
-    | IDENT '(' ListaArgs ')' ';' // chamada de funcao (procedimento, sem atribuir valor de retorno)
+    | FuncCall ';'
     ;
 
 RestoIf : ELSE Cmd
@@ -118,11 +119,35 @@ E : E '+' E {$$ = checkType('+',       (SymbolTable.Entry)$1, (SymbolTable.Entry
   | IDENT '[' E ']' {$$ = access($1, currentScope, true, (SymbolTable.Entry)$3);}
   | IDENT           {$$ = access($1, currentScope, false, null);}
   | '(' E ')'
-  | IDENT '(' ListaArgs ')' // chamada de funcao
+  | FuncCall
   ;
 
-ListaArgs : E ',' ListaArgs
-          | E
+FuncCall : IDENT  {
+                    if (!symbolTable.contains($1))
+                      semerror("symbol '" + $1 + "' not declared");
+                    currentFuncCall = symbolTable.get($1);
+                    if (currentFuncCall.getCls() != SymbolTable.Entry.Class.FUNCTION)
+                      semerror("symbol '" + $1 + "' is not callable");
+                  }
+                 '(' ListaArgs ')' 
+                 {
+                    if (currentParamIdx != currentFuncCall.getFuncParamsCount())
+                      semerror("function '" + $1 + "' expected " + currentFuncCall.getFuncParamsCount() + " parameters, but got " + currentParamIdx);
+                    $$ = currentFuncCall.getType(); // function return type
+                    currentParamIdx = 0;
+                    currentFuncCall = null;
+                 }
+         ;
+
+ListaArgs : E {
+                checkFuncParam(currentFuncCall, currentParamIdx, (SymbolTable.Entry)$1);
+                currentParamIdx++;
+              } ',' ListaArgs
+          | E {
+                checkFuncParam(currentFuncCall, currentParamIdx, (SymbolTable.Entry)$1);
+                currentParamIdx++;
+              }
+          | // vazio (sem parametros)
           ;
 
 %%
@@ -133,6 +158,8 @@ ListaArgs : E ',' ListaArgs
   private SymbolTable.Entry currentType;
   private SymbolTable.Entry.Class currentClass;
   private SymbolTable.Entry currentScope;
+  private SymbolTable.Entry currentFuncCall;
+  private int currentParamIdx;
 
   public static final SymbolTable.Entry TP_INT = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
   public static final SymbolTable.Entry TP_DOUBLE = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
@@ -240,6 +267,18 @@ ListaArgs : E ',' ListaArgs
       return;
     if (returnType.getType() != exprType.getType())
       semerror("function of type " + primTypeToStr(returnType) + " attempted to return a value of type " + primTypeToStr(exprType));
+  }
+
+  public void checkFuncParam(SymbolTable.Entry funcEntry, int paramIdx, SymbolTable.Entry exprType) {
+    if (paramIdx >= funcEntry.getFuncParamsCount())
+      semerror("cannot analyze parameter " + (paramIdx+1) + " for a function that expects " + funcEntry.getFuncParamsCount() + " parameters");
+    String paramName = funcEntry.getFuncParamName(currentParamIdx);
+    SymbolTable.Entry paramType = funcEntry.getInternalSymbolTable().get(paramName);
+    if (paramType.getType() == TP_DOUBLE && exprType.getType() == TP_INT) // allow type coercion
+      exprType = TP_DOUBLE;
+    if (paramType.getType() != exprType.getType())
+      semerror("function expected parameter " + currentParamIdx + " to be of type " + 
+                primTypeToStr(paramType) + ", but got " + primTypeToStr(exprType));
   }
 
   public SymbolTable.Entry assign(String symbolId, SymbolTable.Entry exprType, SymbolTable.Entry scope, boolean isArray, SymbolTable.Entry arraySizeType) {

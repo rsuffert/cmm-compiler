@@ -1,0 +1,16 @@
+func int foo(boolean a, boolean b, int c) {    
+    int res;
+    if (a && b) {
+        res = c;
+    } else {
+        res = 0;
+    }
+    return res;
+}
+
+func int bar() {    
+    double a, b;
+    a = 1;
+    b = foo(true, true, a);
+    return b;
+}
