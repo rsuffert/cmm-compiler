@@ -1,5 +1,5 @@
 func double foo(boolean a, boolean b, int c) {    
-    double res;
+    int res;
     if (a && b) {
         res = c;
     } else {

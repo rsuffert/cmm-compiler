@@ -265,6 +265,8 @@ ListaArgs : E {
     SymbolTable.Entry returnType = scope.getType();
     if (returnType.getType() == TP_VOID && exprType.getType() == TP_VOID) // allow empty return for void functions
       return;
+    if (returnType.getType() == TP_DOUBLE && exprType.getType() == TP_INT) // allow type coercion
+      return;
     if (returnType.getType() != exprType.getType())
       semerror("function of type " + primTypeToStr(returnType) + " attempted to return a value of type " + primTypeToStr(exprType));
   }
