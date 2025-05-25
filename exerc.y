@@ -274,12 +274,12 @@ ListaArgs : E {
   public void checkFuncParam(SymbolTable.Entry funcEntry, int paramIdx, SymbolTable.Entry exprType) {
     if (paramIdx >= funcEntry.getFuncParamsCount())
       semerror("cannot analyze parameter " + (paramIdx+1) + " for a function that expects " + funcEntry.getFuncParamsCount() + " parameters");
-    String paramName = funcEntry.getFuncParamName(currentParamIdx);
+    String paramName = funcEntry.getFuncParamName(paramIdx);
     SymbolTable.Entry paramType = funcEntry.getInternalSymbolTable().get(paramName);
     if (paramType.getType() == TP_DOUBLE && exprType.getType() == TP_INT) // allow type coercion
       exprType = TP_DOUBLE;
     if (paramType.getType() != exprType.getType())
-      semerror("function expected parameter " + currentParamIdx + " to be of type " + 
+      semerror("function expected parameter " + paramIdx + " to be of type " + 
                 primTypeToStr(paramType) + ", but got " + primTypeToStr(exprType));
   }
 
