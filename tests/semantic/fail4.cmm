@@ -1,0 +1,4 @@
+func int foo(int a, int b, int a) {
+    int res;
+    return res;
+}

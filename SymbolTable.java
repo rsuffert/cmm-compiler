@@ -1,5 +1,7 @@
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.LinkedList;
 
 public class SymbolTable {
     private final Map<String, Entry> symbols;
@@ -34,7 +36,7 @@ public class SymbolTable {
     }
 
     public static class Entry {
-        public enum Class { LOCAL_VAR, GLOBAL_VAR, FUNCTION, PRIM_TYPE }
+        public enum Class { LOCAL_VAR, GLOBAL_VAR, PARAM_VAR, FUNCTION, PRIM_TYPE }
     
         // ========================== MEMBERS FOR PRIMITIVE SYMBOLS ==========================
         private Entry type;
@@ -66,6 +68,26 @@ public class SymbolTable {
             return arrayBaseType;
         }
     
+        // ========================== MEMBERS FOR FUNCTION SYMBOLS ==========================
+        private SymbolTable funcSymbolTable = new SymbolTable();
+        private List<String> funcParamNames = new LinkedList<>();
+
+        public SymbolTable getInternalSymbolTable() {
+            return funcSymbolTable;
+        }
+
+        public String getFuncParamName(int idx) {
+            return funcParamNames.get(idx);
+        }
+
+        public void appendFuncParamName(String name) {
+            funcParamNames.add(name);
+        }
+
+        public int getFuncParamsCount() {
+            return funcParamNames.size();
+        }
+
         // ========================== MEMBERS FOR THE CLASS ==========================
         public String toString() {
             return String.format("%s {TYPE = %s, CLS = %s}", getClass().getName(), type, cls);

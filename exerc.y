@@ -8,6 +8,8 @@
 %type <obj> E
 %type <obj> Cmd
 %type <sval> IDENT
+%type <obj> TipoOuVoid
+%type <obj> FuncCall
 
 %right '='
 %left OR
@@ -35,24 +37,46 @@ Tipo : INT      {$$ = TP_INT;}
      | BOOLEAN  {$$ = TP_BOOLEAN;}
      ;
 
-ListaIdent : IDENT ',' ListaIdent           {addSymbolToTable($1, false);}
-           | IDENT '[' E ']' ',' ListaIdent {addSymbolToTable($1, true);}
-           | IDENT                          {addSymbolToTable($1, false);}
-           | IDENT '[' E ']'                {addSymbolToTable($1, true);}
+ListaIdent : IDENT ',' ListaIdent           {addSymbolToTable($1, currentType, currentScope, currentClass, false);}
+           | IDENT '[' E ']' ',' ListaIdent {addSymbolToTable($1, currentType, currentScope, currentClass, true);}
+           | IDENT                          {addSymbolToTable($1, currentType, currentScope, currentClass, false);}
+           | IDENT '[' E ']'                {addSymbolToTable($1, currentType, currentScope, currentClass, true);}
            ;
 
-DeclFun : FUNC TipoOuVoid IDENT '(' FormalPar ')' '{' {currentClass = SymbolTable.Entry.Class.LOCAL_VAR;} DeclVar ListaCmd '}' 
+DeclFun : FUNC TipoOuVoid IDENT {
+                                  currentClass = SymbolTable.Entry.Class.FUNCTION;
+                                  currentType = (SymbolTable.Entry)$2;
+                                  addSymbolToTable($3, currentType, currentScope, currentClass, false);
+                                  currentScope = symbolTable.get($3);
+                                }
+          '(' FormalPar ')' '{'
+            {currentClass = SymbolTable.Entry.Class.LOCAL_VAR;}
+            DeclVar
+            ListaCmd 
+          '}' 
+          {currentScope = null;}
+        ;
 
 TipoOuVoid : Tipo
-           | VOID
+           | VOID {$$ = TP_VOID;}
            ;
 
 FormalPar : ParamList
           | // vazio
           ;
 
-ParamList : Tipo IDENT ',' ParamList
-          | Tipo IDENT
+ParamList : Tipo IDENT {
+                          currentType = (SymbolTable.Entry)$1;
+                          currentClass = SymbolTable.Entry.Class.PARAM_VAR;
+                          currentScope.appendFuncParamName($2);
+                          addSymbolToTable($2, currentType, currentScope, currentClass, false);
+                       } ',' ParamList 
+          | Tipo IDENT {
+                          currentType = (SymbolTable.Entry)$1;
+                          currentClass = SymbolTable.Entry.Class.PARAM_VAR;
+                          currentScope.appendFuncParamName($2);
+                          addSymbolToTable($2, currentType, currentScope, currentClass, false);
+                       }
           ;
 
 Bloco : '{' ListaCmd '}'
@@ -63,10 +87,12 @@ ListaCmd : Cmd ListaCmd
 
 Cmd : Bloco
     | WHILE '(' E ')' Cmd
-    | IDENT '=' E ';'           {$$ = assign($1, (SymbolTable.Entry)$3, false, null);}
-    | IDENT '[' E ']' '=' E ';' {$$ = assign($1, (SymbolTable.Entry)$6, true, (SymbolTable.Entry)$3);}
+    | IDENT '=' E ';'           {$$ = assign($1, (SymbolTable.Entry)$3, currentScope, false, null);}
+    | IDENT '[' E ']' '=' E ';' {$$ = assign($1, (SymbolTable.Entry)$6, currentScope, true, (SymbolTable.Entry)$3);}
     | IF '(' E ')' Cmd RestoIf
-    | RETURN E ';'
+    | RETURN E ';'              {checkReturnType(currentScope, (SymbolTable.Entry)$2);}
+    | RETURN ';'                {checkReturnType(currentScope, TP_VOID);}
+    | FuncCall ';'
     ;
 
 RestoIf : ELSE Cmd
@@ -90,14 +116,38 @@ E : E '+' E {$$ = checkType('+',       (SymbolTable.Entry)$1, (SymbolTable.Entry
   | DOUBLE_LITERAL  {$$ = TP_DOUBLE;}
   | TRUE            {$$ = TP_BOOLEAN;}
   | FALSE           {$$ = TP_BOOLEAN;}
-  | IDENT '[' E ']' {$$ = access($1, true, (SymbolTable.Entry)$3);}
-  | IDENT           {$$ = access($1, false, null);}
+  | IDENT '[' E ']' {$$ = access($1, currentScope, true, (SymbolTable.Entry)$3);}
+  | IDENT           {$$ = access($1, currentScope, false, null);}
   | '(' E ')'
-  | IDENT '(' ListaArgs ')' // chamada de funcao
+  | FuncCall
   ;
 
-ListaArgs : E ',' ListaArgs
-          | E
+FuncCall : IDENT  {
+                    if (!symbolTable.contains($1))
+                      semerror("symbol '" + $1 + "' not declared");
+                    currentFuncCall = symbolTable.get($1);
+                    if (currentFuncCall.getCls() != SymbolTable.Entry.Class.FUNCTION)
+                      semerror("symbol '" + $1 + "' is not callable");
+                  }
+                 '(' ListaArgs ')' 
+                 {
+                    if (currentParamIdx != currentFuncCall.getFuncParamsCount())
+                      semerror("function '" + $1 + "' expected " + currentFuncCall.getFuncParamsCount() + " parameters, but got " + currentParamIdx);
+                    $$ = currentFuncCall.getType(); // function return type
+                    currentParamIdx = 0;
+                    currentFuncCall = null;
+                 }
+         ;
+
+ListaArgs : E {
+                checkFuncParam(currentFuncCall, currentParamIdx, (SymbolTable.Entry)$1);
+                currentParamIdx++;
+              } ',' ListaArgs
+          | E {
+                checkFuncParam(currentFuncCall, currentParamIdx, (SymbolTable.Entry)$1);
+                currentParamIdx++;
+              }
+          | // vazio (sem parametros)
           ;
 
 %%
@@ -107,10 +157,14 @@ ListaArgs : E ',' ListaArgs
 
   private SymbolTable.Entry currentType;
   private SymbolTable.Entry.Class currentClass;
+  private SymbolTable.Entry currentScope;
+  private SymbolTable.Entry currentFuncCall;
+  private int currentParamIdx;
 
   public static final SymbolTable.Entry TP_INT = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
   public static final SymbolTable.Entry TP_DOUBLE = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
   public static final SymbolTable.Entry TP_BOOLEAN = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
+  public static final SymbolTable.Entry TP_VOID = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
   public static final SymbolTable.Entry TP_ARRAY = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
 
   private int yylex () {
@@ -164,6 +218,8 @@ ListaArgs : E ',' ListaArgs
       return "double";
     if (type.getType() == TP_BOOLEAN)
       return "boolean";
+    if (type.getType() == TP_VOID)
+      return "void";
     if (type.getType() == TP_ARRAY)
       return primTypeToStr(type.getArrayBaseType()) + "[]";
     throw new IllegalArgumentException("Unknown type: " + type);
@@ -185,22 +241,60 @@ ListaArgs : E ',' ListaArgs
     }
   }
 
-  public void addSymbolToTable(String symbolId, boolean isArray) {
-    SymbolTable.Entry symbolType = new SymbolTable.Entry(currentType, currentClass);
+  public void addSymbolToTable(
+      String symbolId, SymbolTable.Entry symbolType,
+      SymbolTable.Entry scope, SymbolTable.Entry.Class cls,
+      boolean isArray) {
+    SymbolTable.Entry _symbolType = symbolType;
     if (isArray)
-      symbolType = new SymbolTable.Entry(currentType, TP_ARRAY, currentClass);
-    try {
-      symbolTable.add(symbolId, symbolType);
-    } catch (IllegalArgumentException e) {
-      semerror(e.getMessage());
-    }
+      _symbolType = new SymbolTable.Entry(symbolType, TP_ARRAY, cls);
+    else if (cls == SymbolTable.Entry.Class.FUNCTION)
+      _symbolType = new SymbolTable.Entry(symbolType, cls);
+
+    SymbolTable _symbolTable = symbolTable;
+    if (scope != null)
+      _symbolTable = scope.getInternalSymbolTable();
+
+    if (_symbolTable.contains(symbolId))
+      semerror("symbol '" + symbolId + "' already declared in this scope");
+
+    _symbolTable.add(symbolId, _symbolType);
   }
 
-  public SymbolTable.Entry assign(String symbolId, SymbolTable.Entry exprType, boolean isArray, SymbolTable.Entry arraySizeType) {
-    if (!symbolTable.contains(symbolId))
+  public void checkReturnType(SymbolTable.Entry scope, SymbolTable.Entry exprType) {
+    SymbolTable.Entry returnType = scope.getType();
+    if (returnType.getType() == TP_VOID && exprType.getType() == TP_VOID) // allow empty return for void functions
+      return;
+    if (returnType.getType() == TP_DOUBLE && exprType.getType() == TP_INT) // allow type coercion
+      return;
+    if (returnType.getType() != exprType.getType())
+      semerror("function of type " + primTypeToStr(returnType) + " attempted to return a value of type " + primTypeToStr(exprType));
+  }
+
+  public void checkFuncParam(SymbolTable.Entry funcEntry, int paramIdx, SymbolTable.Entry exprType) {
+    if (paramIdx >= funcEntry.getFuncParamsCount())
+      semerror("cannot analyze parameter " + (paramIdx+1) + " for a function that expects " + funcEntry.getFuncParamsCount() + " parameters");
+    String paramName = funcEntry.getFuncParamName(paramIdx);
+    SymbolTable.Entry paramType = funcEntry.getInternalSymbolTable().get(paramName);
+    if (paramType.getType() == TP_DOUBLE && exprType.getType() == TP_INT) // allow type coercion
+      exprType = TP_DOUBLE;
+    if (paramType.getType() != exprType.getType())
+      semerror("function expected parameter " + paramIdx + " to be of type " + 
+                primTypeToStr(paramType) + ", but got " + primTypeToStr(exprType));
+  }
+
+  public SymbolTable.Entry assign(String symbolId, SymbolTable.Entry exprType, SymbolTable.Entry scope, boolean isArray, SymbolTable.Entry arraySizeType) {
+    SymbolTable.Entry symbolType = null;
+    if (scope != null && scope.getInternalSymbolTable().contains(symbolId))
+      symbolType = scope.getInternalSymbolTable().get(symbolId);
+    else if (symbolTable.contains(symbolId))
+      symbolType = symbolTable.get(symbolId);
+    else
         semerror("symbol '" + symbolId + "' not declared");
 
-    SymbolTable.Entry symbolType = symbolTable.get(symbolId);
+    if (symbolType.getCls() == SymbolTable.Entry.Class.FUNCTION)
+      semerror("cannot assign to symbol '" + symbolId + "' because it's a function");
+
     if (isArray) {
       if (symbolType.getType() != TP_ARRAY)
         semerror("expected symbol '" + symbolId + "' to be of array type");
@@ -219,13 +313,16 @@ ListaArgs : E ',' ListaArgs
     return symbolType;
   }
 
-  public SymbolTable.Entry access(String symbolId, boolean isArray, SymbolTable.Entry arrayIdxType) {
-    if (!symbolTable.contains(symbolId))
-      semerror("symbol '" + symbolId + "' not declared");
+  public SymbolTable.Entry access(String symbolId, SymbolTable.Entry scope, boolean isArray, SymbolTable.Entry arrayIdxType) {
+    SymbolTable.Entry symbolType = null;
+    if (scope != null && scope.getInternalSymbolTable().contains(symbolId))
+      symbolType = scope.getInternalSymbolTable().get(symbolId);
+    else if (symbolTable.contains(symbolId))
+      symbolType = symbolTable.get(symbolId);
+    else
+        semerror("symbol '" + symbolId + "' not declared");
 
-    SymbolTable.Entry symbolType = symbolTable.get(symbolId);
-
-    if (!isArray) return symbolType;
+    if (!isArray) return symbolType.getType();
 
     if (symbolType.getType() != TP_ARRAY)
       semerror("expected symbol '" + symbolId + "' to be of array type");
