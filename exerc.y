@@ -77,6 +77,18 @@ ParamList : Tipo IDENT {
                           currentScope.appendFuncParamName($2);
                           addSymbolToTable($2, currentType, currentScope, currentClass, false);
                        }
+          | Tipo IDENT '[' ']' {
+                          currentType = (SymbolTable.Entry)$1;
+                          currentClass = SymbolTable.Entry.Class.PARAM_VAR;
+                          currentScope.appendFuncParamName($2);
+                          addSymbolToTable($2, currentType, currentScope, currentClass, true);
+                       } ',' ParamList
+          | Tipo IDENT '[' ']' {
+                          currentType = (SymbolTable.Entry)$1;
+                          currentClass = SymbolTable.Entry.Class.PARAM_VAR;
+                          currentScope.appendFuncParamName($2);
+                          addSymbolToTable($2, currentType, currentScope, currentClass, true);
+                       } 
           ;
 
 Bloco : '{' ListaCmd '}'

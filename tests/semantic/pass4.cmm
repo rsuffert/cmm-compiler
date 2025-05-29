@@ -1,0 +1,6 @@
+
+func int foo(int a[],int c[]){
+    int b;
+    
+    return a[5];
+}
