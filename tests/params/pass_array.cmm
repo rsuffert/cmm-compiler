@@ -1,0 +1,11 @@
+func double firstIdx(double arr[]) {
+    double res;
+    res = arr[0];
+    return res;
+}
+
+func void main() {
+    double arr[1];
+    arr[0] = 1;
+    firstIdx(arr);
+}
