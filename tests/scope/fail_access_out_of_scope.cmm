@@ -1,0 +1,10 @@
+func void foo() {
+    double a;
+    a = 1.5;
+}
+
+func double bar() {
+    double b;
+    b = a;
+    return b;
+}
