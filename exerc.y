@@ -31,6 +31,7 @@ ListaDecl : {currentClass = SymbolTable.Entry.Class.GLOBAL_VAR;} DeclVar ListaDe
           ;
 
 DeclVar : Tipo {currentType = (SymbolTable.Entry)$1;} ListaIdent ';'
+        ;
 
 Tipo : INT      {$$ = TP_INT;}
      | DOUBLE   {$$ = TP_DOUBLE;}
@@ -92,6 +93,7 @@ ParamList : Tipo IDENT {
           ;
 
 Bloco : '{' ListaCmd '}'
+      ;
 
 ListaCmd : Cmd ListaCmd
          | // vazio
