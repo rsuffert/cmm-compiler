@@ -1,5 +1,5 @@
 func void main() {
-    int b, c;
+    int a, b, c;
     b = 3;
     c = b + 1;
     a = (1 > b) && (b > c);
