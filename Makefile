@@ -41,7 +41,8 @@ run-tests: Parser.class
 			echo "Skipping $$file: filename must contain 'pass' or 'fail'"; \
 			continue; \
 		fi; \
-		java Parser < $$file > /dev/null 2>&1; \
+		OUTPUT=$$(mktemp); \
+        java Parser < $$file > $$OUTPUT 2>&1; \
 		RESULT=$$?; \
 		if [ $$EXPECTED -eq 0 ] && [ $$RESULT -eq 0 ]; then \
 			echo "✅ $$file: PASSED as expected."; \
@@ -51,10 +52,17 @@ run-tests: Parser.class
 			CORRECT=$$((CORRECT + 1)); \
 		else \
 			echo "❌ $$file: UNEXPECTED RESULT!"; \
+            echo "---- OUTPUT ----"; \
+            cat $$OUTPUT; \
+            echo "-----------------"; \
 		fi; \
 		TOTAL=$$((TOTAL + 1)); \
 		echo ""; \
 	done; \
-	echo "==============================="; \
-	echo "Summary: $$CORRECT / $$TOTAL tests had the expected result."; \
-	echo "==============================="
+    echo "========================================"; \
+    if [ $$CORRECT -eq $$TOTAL ]; then \
+        echo "🎉 ALL TESTS PASSED: $$CORRECT / $$TOTAL 🎉"; \
+    else \
+        echo "⚠️  SOME TESTS FAILED: $$CORRECT / $$TOTAL ⚠️"; \
+    fi; \
+    echo "========================================"
