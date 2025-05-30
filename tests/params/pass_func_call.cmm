@@ -16,6 +16,5 @@ func void main() {
     double sum;
     x = 1;
     y = x * 2;
-    sum = sumDoubles(x, y);
-    self(sumDoubles(x, y));
+    sum = self(sumDoubles(sumDoubles(x, y), sumDoubles(x, y)));
 }
