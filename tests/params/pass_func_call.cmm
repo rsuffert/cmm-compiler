@@ -1,0 +1,20 @@
+double x, y;
+
+func double sumDoubles(double a, double b) {
+    double res;
+    res = a + b;
+    return res;
+}
+
+func double self(double a) {
+    double res;
+    res = a;
+    return a;
+}
+
+func void main() {
+    double sum;
+    x = 1;
+    y = x * 2;
+    sum = self(sumDoubles(sumDoubles(x, y), sumDoubles(x, y)));
+}

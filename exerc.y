@@ -31,6 +31,7 @@ ListaDecl : {currentClass = SymbolTable.Entry.Class.GLOBAL_VAR;} DeclVar ListaDe
           ;
 
 DeclVar : Tipo {currentType = (SymbolTable.Entry)$1;} ListaIdent ';'
+        ;
 
 Tipo : INT      {$$ = TP_INT;}
      | DOUBLE   {$$ = TP_DOUBLE;}
@@ -92,6 +93,7 @@ ParamList : Tipo IDENT {
           ;
 
 Bloco : '{' ListaCmd '}'
+      ;
 
 ListaCmd : Cmd ListaCmd
          | // vazio
@@ -130,36 +132,65 @@ E : E '+' E {$$ = checkType('+',       (SymbolTable.Entry)$1, (SymbolTable.Entry
   | FALSE           {$$ = TP_BOOLEAN;}
   | IDENT '[' E ']' {$$ = access($1, currentScope, true, (SymbolTable.Entry)$3);}
   | IDENT           {$$ = access($1, currentScope, false, null);}
-  | '(' E ')'
+  | '(' E ')'       {$$ = (SymbolTable.Entry)$2;} // parenthesis for grouping
   | FuncCall
   ;
 
 FuncCall : IDENT  {
-                    if (!symbolTable.contains($1))
-                      semerror("symbol '" + $1 + "' not declared");
-                    currentFuncCall = symbolTable.get($1);
-                    if (currentFuncCall.getCls() != SymbolTable.Entry.Class.FUNCTION)
-                      semerror("symbol '" + $1 + "' is not callable");
-                  }
-                 '(' ListaArgs ')' 
-                 {
-                    if (currentParamIdx != currentFuncCall.getFuncParamsCount())
-                      semerror("function '" + $1 + "' expected " + currentFuncCall.getFuncParamsCount() + " parameters, but got " + currentParamIdx);
-                    $$ = currentFuncCall.getType(); // function return type
-                    currentParamIdx = 0;
-                    currentFuncCall = null;
-                 }
+             SymbolTable.Entry funcActvCall = symbolTable.get($1); 
+
+             if (funcActvCall == null) { 
+               semerror("symbol '" + $1 + "' not declared");
+             }
+             if (funcActvCall.getCls() != SymbolTable.Entry.Class.FUNCTION) {
+               semerror("symbol '" + $1 + "' is not callable");
+             }
+             
+             currentFuncCall = funcActvCall;
+
+             funcContxStk.push(funcActvCall); 
+             paramIdxStk.push(0);                    
+           }
+           '(' ListaArgs ')'
+           { 
+             SymbolTable.Entry funcActvStck = funcContxStk.peek();
+             int currParamStck = paramIdxStk.peek();
+
+             if (currParamStck != funcActvStck.getFuncParamsCount()){
+               semerror("function '" + $1 + "' expected " + funcActvStck.getFuncParamsCount() + " parameters, but got " + currParamStck);
+             }
+             $$ = funcActvStck.getType();
+             funcContxStk.pop();
+             paramIdxStk.pop();
+           }
          ;
 
 ListaArgs : E {
-                checkFuncParam(currentFuncCall, currentParamIdx, (SymbolTable.Entry)$1);
-                currentParamIdx++;
-              } ',' ListaArgs
-          | E {
-                checkFuncParam(currentFuncCall, currentParamIdx, (SymbolTable.Entry)$1);
-                currentParamIdx++;
+              if (funcContxStk.isEmpty()){ 
+                  semerror("SEMANTIC INTERNAL ERROR: Function context stack is empty during argument parsing.");
+              } else {
+                  SymbolTable.Entry actvFuncCall = funcContxStk.peek(); 
+                  int currArgIdx = paramIdxStk.pop();
+                  
+                  checkFuncParam(actvFuncCall, currArgIdx, (SymbolTable.Entry)$1);
+                  paramIdxStk.push(currArgIdx + 1);
+                 
               }
-          | // vazio (sem parametros)
+            } ',' ListaArgs
+          | E {
+              
+              if (funcContxStk.isEmpty()){
+                  semerror("SEMANTIC INTERNAL ERROR: Function context stack is empty during argument parsing.");
+              } else {
+                  SymbolTable.Entry actvFuncCall = funcContxStk.peek(); 
+                  int currArgIdx = paramIdxStk.pop();
+                 
+                  checkFuncParam(actvFuncCall, currArgIdx, (SymbolTable.Entry)$1);
+                  paramIdxStk.push(currArgIdx + 1);
+                  
+              }
+            }
+          | // vazio
           ;
 
 %%
@@ -172,6 +203,8 @@ ListaArgs : E {
   private SymbolTable.Entry currentScope;
   private SymbolTable.Entry currentFuncCall;
   private int currentParamIdx;
+  private java.util.Stack<SymbolTable.Entry> funcContxStk = new java.util.Stack<>();
+  private java.util.Stack<Integer> paramIdxStk = new java.util.Stack<>();
 
   public static final SymbolTable.Entry TP_INT = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
   public static final SymbolTable.Entry TP_DOUBLE = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
@@ -293,6 +326,12 @@ ListaArgs : E {
     if (paramType.getType() != exprType.getType())
       semerror("function expected parameter " + paramIdx + " to be of type " + 
                 primTypeToStr(paramType) + ", but got " + primTypeToStr(exprType));
+    if (paramType.getType() == TP_ARRAY) {
+      // due to the previous check, both types are arrays at this point
+      if (paramType.getArrayBaseType().getType() != exprType.getArrayBaseType().getType())
+        semerror("function expected array parameter " + paramIdx + " to be of type " + 
+                  primTypeToStr(paramType) + ", but got " + primTypeToStr(exprType));
+    }
   }
 
   public SymbolTable.Entry assign(String symbolId, SymbolTable.Entry exprType, SymbolTable.Entry scope, boolean isArray, SymbolTable.Entry arraySizeType) {
@@ -334,7 +373,9 @@ ListaArgs : E {
     else
         semerror("symbol '" + symbolId + "' not declared");
 
-    if (!isArray) return symbolType.getType();
+    if (!isArray)
+    // ensure array types are not unwrapped
+      return symbolType.getType() == TP_ARRAY ? symbolType : symbolType.getType();
 
     if (symbolType.getType() != TP_ARRAY)
       semerror("expected symbol '" + symbolId + "' to be of array type");
@@ -382,6 +423,8 @@ ListaArgs : E {
         throw new IllegalArgumentException("Unknown operator: " + operator);
     }
   }
+
+
 
   public static void main(String args[]) throws IOException {
     Parser yyparser;

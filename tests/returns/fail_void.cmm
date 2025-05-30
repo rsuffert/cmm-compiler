@@ -1,0 +1,5 @@
+func void doNothing() {
+    int a;
+    a = 0;
+    return a;
+}

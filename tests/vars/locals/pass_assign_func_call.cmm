@@ -1,0 +1,13 @@
+func boolean and(boolean v1, boolean v2) {
+    boolean res;
+    res = v1 && v2;
+    return res;
+}
+
+func void main() {
+    boolean a, b, c, d;
+    a = true;
+    b = false;
+    c = a && b;
+    d = and(b, c);
+}

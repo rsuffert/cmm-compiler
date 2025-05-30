@@ -18,6 +18,9 @@ public class SymbolTable {
     }
 
     public Entry get(String name) {
+        if (!contains(name)) {
+            throw new IllegalArgumentException("Symbol '" + name + "' does not exist in the symbol table.");
+        }
         return symbols.get(name);
     }
 

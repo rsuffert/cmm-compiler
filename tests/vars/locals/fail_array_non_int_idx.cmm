@@ -1,0 +1,4 @@
+func void main() {
+    boolean a[1];
+    a[true] = true;
+}
