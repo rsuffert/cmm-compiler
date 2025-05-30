@@ -1,0 +1,14 @@
+double x, y;
+
+func double sumDoubles(double a, double b) {
+    double res;
+    res = a + b;
+    return res;
+}
+
+func void main() {
+    double sum;
+    x = 1;
+    y = x * 2;
+    sum = sumDoubles(x, y);
+}

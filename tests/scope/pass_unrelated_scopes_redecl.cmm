@@ -1,0 +1,16 @@
+func void foo() {
+    double a;
+    a = 1.5;
+}
+
+func double bar() {
+    double a;
+    a = 2.0;
+    return a;
+}
+
+func boolean buzz() {
+    boolean foo;
+    foo = true && false;
+    return foo;
+}
