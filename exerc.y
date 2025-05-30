@@ -137,7 +137,7 @@ E : E '+' E {$$ = checkType('+',       (SymbolTable.Entry)$1, (SymbolTable.Entry
   ;
 
 FuncCall : IDENT  {
-             SymbolTable.Entry funcActvCall = symbolTable.get($1); 
+             SymbolTable.Entry funcActvCall = symbolTable.get($1);
 
              if (funcActvCall == null) { 
                semerror("symbol '" + $1 + "' not declared");
@@ -372,6 +372,9 @@ ListaArgs : E {
       symbolType = symbolTable.get(symbolId);
     else
         semerror("symbol '" + symbolId + "' not declared");
+
+    if (symbolType.getCls() == SymbolTable.Entry.Class.FUNCTION)
+      semerror("cannot access symbol '" + symbolId + "' because it's a function (should be called instead)");
 
     if (!isArray)
     // ensure array types are not unwrapped
