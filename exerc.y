@@ -293,6 +293,12 @@ ListaArgs : E {
     if (paramType.getType() != exprType.getType())
       semerror("function expected parameter " + paramIdx + " to be of type " + 
                 primTypeToStr(paramType) + ", but got " + primTypeToStr(exprType));
+    if (paramType.getType() == TP_ARRAY) {
+      // due to the previous check, both types are arrays at this point
+      if (paramType.getArrayBaseType().getType() != exprType.getArrayBaseType().getType())
+        semerror("function expected array parameter " + paramIdx + " to be of type " + 
+                  primTypeToStr(paramType) + ", but got " + primTypeToStr(exprType));
+    }
   }
 
   public SymbolTable.Entry assign(String symbolId, SymbolTable.Entry exprType, SymbolTable.Entry scope, boolean isArray, SymbolTable.Entry arraySizeType) {
@@ -334,7 +340,8 @@ ListaArgs : E {
     else
         semerror("symbol '" + symbolId + "' not declared");
 
-    if (!isArray) return symbolType.getType();
+    if (!isArray)
+      return symbolType.getType() == TP_ARRAY ? symbolType : symbolType.getType();
 
     if (symbolType.getType() != TP_ARRAY)
       semerror("expected symbol '" + symbolId + "' to be of array type");
