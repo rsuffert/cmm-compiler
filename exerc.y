@@ -130,7 +130,7 @@ E : E '+' E {$$ = checkType('+',       (SymbolTable.Entry)$1, (SymbolTable.Entry
   | FALSE           {$$ = TP_BOOLEAN;}
   | IDENT '[' E ']' {$$ = access($1, currentScope, true, (SymbolTable.Entry)$3);}
   | IDENT           {$$ = access($1, currentScope, false, null);}
-  | '(' E ')'
+  | '(' E ')'       {$$ = (SymbolTable.Entry)$2;} // parenthesis for grouping
   | FuncCall
   ;
 
