@@ -10,7 +10,6 @@
 %type <sval> IDENT
 %type <obj> TipoOuVoid
 %type <obj> FuncCall
-%type <obj> FuncContx
 
 %right '='
 %left OR
