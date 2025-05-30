@@ -10,6 +10,7 @@
 %type <sval> IDENT
 %type <obj> TipoOuVoid
 %type <obj> FuncCall
+%type <obj> FuncContx
 
 %right '='
 %left OR
@@ -135,31 +136,60 @@ E : E '+' E {$$ = checkType('+',       (SymbolTable.Entry)$1, (SymbolTable.Entry
   ;
 
 FuncCall : IDENT  {
-                    if (!symbolTable.contains($1))
-                      semerror("symbol '" + $1 + "' not declared");
-                    currentFuncCall = symbolTable.get($1);
-                    if (currentFuncCall.getCls() != SymbolTable.Entry.Class.FUNCTION)
-                      semerror("symbol '" + $1 + "' is not callable");
-                  }
-                 '(' ListaArgs ')' 
-                 {
-                    if (currentParamIdx != currentFuncCall.getFuncParamsCount())
-                      semerror("function '" + $1 + "' expected " + currentFuncCall.getFuncParamsCount() + " parameters, but got " + currentParamIdx);
-                    $$ = currentFuncCall.getType(); // function return type
-                    currentParamIdx = 0;
-                    currentFuncCall = null;
-                 }
+             SymbolTable.Entry funcActvCall = symbolTable.get($1); 
+
+             if (funcActvCall == null) { 
+               semerror("symbol '" + $1 + "' not declared");
+             }
+             if (funcActvCall.getCls() != SymbolTable.Entry.Class.FUNCTION) {
+               semerror("symbol '" + $1 + "' is not callable");
+             }
+             
+             currentFuncCall = funcActvCall;
+
+             funcContxStk.push(funcActvCall); 
+             paramIdxStk.push(0);                    
+           }
+           '(' ListaArgs ')'
+           { 
+             SymbolTable.Entry funcActvStck = funcContxStk.peek();
+             int currParamStck = paramIdxStk.peek();
+
+             if (currParamStck != funcActvStck.getFuncParamsCount()){
+               semerror("function '" + $1 + "' expected " + funcActvStck.getFuncParamsCount() + " parameters, but got " + currParamStck);
+             }
+             $$ = funcActvStck.getType();
+             funcContxStk.pop();
+             paramIdxStk.pop();
+           }
          ;
 
 ListaArgs : E {
-                checkFuncParam(currentFuncCall, currentParamIdx, (SymbolTable.Entry)$1);
-                currentParamIdx++;
-              } ',' ListaArgs
-          | E {
-                checkFuncParam(currentFuncCall, currentParamIdx, (SymbolTable.Entry)$1);
-                currentParamIdx++;
+              if (funcContxStk.isEmpty()){ 
+                  semerror("SEMANTIC INTERNAL ERROR: Function context stack is empty during argument parsing.");
+              } else {
+                  SymbolTable.Entry actvFuncCall = funcContxStk.peek(); 
+                  int currArgIdx = paramIdxStk.pop();
+                  
+                  checkFuncParam(actvFuncCall, currArgIdx, (SymbolTable.Entry)$1);
+                  paramIdxStk.push(currArgIdx + 1);
+                 
               }
-          | // vazio (sem parametros)
+            } ',' ListaArgs
+          | E {
+              
+              if (funcContxStk.isEmpty()){
+                  semerror("SEMANTIC INTERNAL ERROR: Function context stack is empty during argument parsing.");
+              } else {
+                  SymbolTable.Entry actvFuncCall = funcContxStk.peek(); 
+                  int currArgIdx = paramIdxStk.pop();
+                 
+                  checkFuncParam(actvFuncCall, currArgIdx, (SymbolTable.Entry)$1);
+                  paramIdxStk.push(currArgIdx + 1);
+                  
+              }
+            }
+          | // vazio
           ;
 
 %%
@@ -172,6 +202,8 @@ ListaArgs : E {
   private SymbolTable.Entry currentScope;
   private SymbolTable.Entry currentFuncCall;
   private int currentParamIdx;
+  private java.util.Stack<SymbolTable.Entry> funcContxStk = new java.util.Stack<>();
+  private java.util.Stack<Integer> paramIdxStk = new java.util.Stack<>();
 
   public static final SymbolTable.Entry TP_INT = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
   public static final SymbolTable.Entry TP_DOUBLE = new SymbolTable.Entry(null, SymbolTable.Entry.Class.PRIM_TYPE);
@@ -389,6 +421,8 @@ ListaArgs : E {
         throw new IllegalArgumentException("Unknown operator: " + operator);
     }
   }
+
+
 
   public static void main(String args[]) throws IOException {
     Parser yyparser;
