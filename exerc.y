@@ -374,6 +374,7 @@ ListaArgs : E {
         semerror("symbol '" + symbolId + "' not declared");
 
     if (!isArray)
+    // ensure array types are not unwrapped
       return symbolType.getType() == TP_ARRAY ? symbolType : symbolType.getType();
 
     if (symbolType.getType() != TP_ARRAY)
