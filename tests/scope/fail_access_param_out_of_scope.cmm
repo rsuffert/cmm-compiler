@@ -1,0 +1,11 @@
+func double foo(double v) {
+    double a;
+    a = v;
+    return a;
+}
+
+func double bar() {
+    double b;
+    b = foo(b);
+    return v;
+}

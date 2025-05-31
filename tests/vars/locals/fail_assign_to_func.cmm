@@ -1,0 +1,11 @@
+func int one() {
+    int res;
+    res = 1;
+    return 1;
+}
+
+func void main() {
+    int a;
+    a = 1;
+    one = a;
+}

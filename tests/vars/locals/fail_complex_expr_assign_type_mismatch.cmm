@@ -1,0 +1,14 @@
+int a, b;
+
+func int self(int val) {
+    int res;
+    res = val;
+    return res;
+}
+
+func void main() {
+    int c;
+    a = (1 * 2) / 3;
+    b = a + 1 + 2;
+    c = ((a + b) * 3) == (self(a)/self(b));
+}

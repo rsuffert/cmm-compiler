@@ -100,10 +100,10 @@ ListaCmd : Cmd ListaCmd
          ;
 
 Cmd : Bloco
-    | WHILE '(' E ')' Cmd
+    | WHILE '(' E ')' Cmd       {if (((SymbolTable.Entry)$3).getType() != TP_BOOLEAN) semerror("while condition must be of type boolean");}
     | IDENT '=' E ';'           {$$ = assign($1, (SymbolTable.Entry)$3, currentScope, false, null);}
     | IDENT '[' E ']' '=' E ';' {$$ = assign($1, (SymbolTable.Entry)$6, currentScope, true, (SymbolTable.Entry)$3);}
-    | IF '(' E ')' Cmd RestoIf
+    | IF '(' E ')' Cmd RestoIf  {if (((SymbolTable.Entry)$3).getType() != TP_BOOLEAN) semerror("if condition must be of type boolean");}
     | RETURN E ';'              {checkReturnType(currentScope, (SymbolTable.Entry)$2);}
     | RETURN ';'                {checkReturnType(currentScope, TP_VOID);}
     | FuncCall ';'
@@ -137,7 +137,7 @@ E : E '+' E {$$ = checkType('+',       (SymbolTable.Entry)$1, (SymbolTable.Entry
   ;
 
 FuncCall : IDENT  {
-             SymbolTable.Entry funcActvCall = symbolTable.get($1); 
+             SymbolTable.Entry funcActvCall = symbolTable.get($1);
 
              if (funcActvCall == null) { 
                semerror("symbol '" + $1 + "' not declared");
@@ -372,6 +372,9 @@ ListaArgs : E {
       symbolType = symbolTable.get(symbolId);
     else
         semerror("symbol '" + symbolId + "' not declared");
+
+    if (symbolType.getCls() == SymbolTable.Entry.Class.FUNCTION)
+      semerror("cannot access symbol '" + symbolId + "' because it's a function (should be called instead)");
 
     if (!isArray)
     // ensure array types are not unwrapped
