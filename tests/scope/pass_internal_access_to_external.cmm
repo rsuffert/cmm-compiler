@@ -1,0 +1,5 @@
+boolean a;
+func void main() {
+    boolean bool;
+    bool = a;
+}
