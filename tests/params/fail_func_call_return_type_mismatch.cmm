@@ -1,0 +1,23 @@
+double x, y;
+
+func double sumDoubles(double a, double b) {
+    double res;
+    res = a + b;
+    return res;
+}
+
+func boolean positive(int val) {
+    boolean res;
+    res = true;
+    if (val <= 0) {
+        res = false;
+    }
+    return res;
+}
+
+func void main() {
+    double sum;
+    x = 1;
+    y = x * 2;
+    sum = sumDoubles(sumDoubles(x, y), positive(1));
+}
