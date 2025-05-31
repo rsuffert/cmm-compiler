@@ -1,0 +1,10 @@
+func void main() {
+    boolean a;
+    a = true;
+    if (a) {
+        a = false;
+    }
+    while (a) {
+        a = false;
+    }
+}
